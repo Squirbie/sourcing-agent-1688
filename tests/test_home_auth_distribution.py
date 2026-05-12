@@ -167,9 +167,10 @@ def test_distribution_files_are_portable_and_documented():
     assert claude_marketplace["plugins"][0]["source"] == "./"
     assert "sourcing1688-mcp" in pyproject
     assert "sourcing-agent-1688" in pyproject
-    assert "uv sync --extra dev" in readme
-    assert "uv run pytest -q -ra" in readme
-    assert "uvx --from" in readme
+    assert "암막우산" in readme
+    assert "codex plugin marketplace add" in readme
+    assert "open.1688.com" in readme
+    assert "이 repo를 codex" in readme
     assert "uninstall" in readme
     assert "sourcing-agent-1688" in skill
     assert "mock" in skill
