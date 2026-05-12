@@ -1,0 +1,31 @@
+{
+  "name": "sourcing-agent-1688",
+  "version": "0.3.0",
+  "description": "1688 product sourcing agent tools for Korean sellers",
+  "author": {
+    "name": "sourcing1688 contributors",
+    "url": "https://github.com/Squirbie"
+  },
+  "repository": "https://github.com/Squirbie/sourcing-agent-1688",
+  "homepage": "https://github.com/Squirbie/sourcing-agent-1688#readme",
+  "license": "MIT",
+  "keywords": ["1688", "sourcing-agent", "korean-sellers", "mcp", "codex"],
+  "readme": "./README.md",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.codex.json",
+  "interface": {
+    "displayName": "1688 Sourcing Agent",
+    "shortDescription": "Agent-friendly 1688 sourcing tools for Korean sellers",
+    "longDescription": "JSON-first CLI and MCP tools for targeted 1688 sourcing research, detail analysis, asset manifests, scoring, and shortlist export.",
+    "developerName": "sourcing1688 contributors",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Use 1688 Sourcing Agent to check provider readiness.",
+      "Use 1688 Sourcing Agent to find sourcing candidates for 암막우산.",
+      "Use 1688 Sourcing Agent to analyze this 1688 product URL.",
+      "Use 1688 Sourcing Agent to download product assets."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

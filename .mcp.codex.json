@@ -1,0 +1,12 @@
+{
+  "mcp_servers": {
+    "sourcing1688": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "sourcing1688.mcp_server"],
+      "env": {
+        "SOURCING1688_PROVIDER": "auto",
+        "SOURCING1688_HOME": "~/.sourcing1688"
+      }
+    }
+  }
+}

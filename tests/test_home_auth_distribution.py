@@ -1,0 +1,201 @@
+import json
+from pathlib import Path
+
+import httpx
+from typer.testing import CliRunner
+
+from sourcing1688.cli import app
+from sourcing1688.config import get_settings
+from sourcing1688.providers.browser_provider import Browser1688Provider
+
+
+runner = CliRunner()
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def invoke_json(args, env=None):
+    result = runner.invoke(app, [*args, "--json"], env=env)
+    return result, json.loads(result.output)
+
+
+def test_home_default_path_resolution(monkeypatch):
+    monkeypatch.delenv("SOURCING1688_HOME", raising=False)
+    settings = get_settings()
+
+    assert settings.home == Path.home() / ".sourcing1688"
+    assert settings.db_path == settings.home / "data" / "sourcing1688.duckdb"
+    assert settings.output_dir == settings.home / "assets"
+    assert settings.ali1688_token_cache_path == settings.home / "token-cache" / ".1688_token_cache.json"
+
+
+def test_init_home_creates_expected_dirs(tmp_path):
+    result, payload = invoke_json(["init-home"], env={"SOURCING1688_HOME": str(tmp_path)})
+
+    assert result.exit_code == 0
+    assert payload["status"] == "ok"
+    for name in ["config", "data", "assets", "raw", "browser-profile", "token-cache", "logs"]:
+        assert (tmp_path / name).is_dir()
+
+
+def test_home_cli_json(tmp_path):
+    result, payload = invoke_json(["home"], env={"SOURCING1688_HOME": str(tmp_path)})
+
+    assert result.exit_code == 0
+    assert payload["status"] == "ok"
+    assert payload["home"] == str(tmp_path)
+    assert "token_cache" in payload["paths"]
+
+
+def test_clean_dry_run_does_not_delete(tmp_path):
+    target = tmp_path / "assets" / "sample.txt"
+    target.parent.mkdir(parents=True)
+    target.write_text("keep", encoding="utf-8")
+
+    result, payload = invoke_json(["clean", "--dry-run"], env={"SOURCING1688_HOME": str(tmp_path)})
+
+    assert result.exit_code == 0
+    assert payload["status"] == "dry_run"
+    assert target.exists()
+    assert payload["would_delete"]
+
+
+def test_uninstall_requires_yes(tmp_path):
+    result, payload = invoke_json(["uninstall"], env={"SOURCING1688_HOME": str(tmp_path)})
+
+    assert result.exit_code == 1
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "confirmation_required"
+
+
+def test_uninstall_yes_deletes_temp_home(tmp_path):
+    (tmp_path / "assets").mkdir(parents=True)
+
+    result, payload = invoke_json(["uninstall", "--yes"], env={"SOURCING1688_HOME": str(tmp_path)})
+
+    assert result.exit_code == 0
+    assert payload["status"] == "ok"
+    assert not tmp_path.exists()
+
+
+def test_auth_status_redacts_secrets(tmp_path):
+    env = {
+        "SOURCING1688_HOME": str(tmp_path),
+        "ALI1688_APP_KEY": "app-key-secret",
+        "ALI1688_APP_SECRET": "app-secret-secret",
+        "ALI1688_REFRESH_TOKEN": "refresh-token-secret",
+    }
+    result, payload = invoke_json(["auth", "status"], env=env)
+
+    assert result.exit_code == 0
+    assert payload["ready"] is True
+    assert "app-key-secret" not in result.output
+    assert "app-secret-secret" not in result.output
+    assert "refresh-token-secret" not in result.output
+
+
+def test_auth_url_builds_expected_url_without_secret(tmp_path):
+    env = {"SOURCING1688_HOME": str(tmp_path), "ALI1688_APP_KEY": "test-app-key", "ALI1688_APP_SECRET": "hidden-secret"}
+    result, payload = invoke_json(["auth", "url", "--redirect-uri", "https://example.com/callback"], env=env)
+
+    assert result.exit_code == 0
+    assert payload["status"] == "ok"
+    assert "client_id=test-app-key" in payload["authorization_url"]
+    assert "hidden-secret" not in result.output
+
+
+def test_auth_exchange_uses_mocked_http_and_stores_token_without_printing(monkeypatch, tmp_path):
+    class MockResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"access_token": "access-secret", "refresh_token": "refresh-secret", "expires_in": 3600}
+
+    async def mock_post(self, url, data=None):
+        return MockResponse()
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+    env = {
+        "SOURCING1688_HOME": str(tmp_path),
+        "ALI1688_APP_KEY": "test-app-key",
+        "ALI1688_APP_SECRET": "hidden-secret",
+    }
+    result, payload = invoke_json(["auth", "exchange", "--code", "code-123", "--redirect-uri", "https://example.com/callback"], env=env)
+
+    assert result.exit_code == 0
+    assert payload["token_saved"] is True
+    assert payload["has_refresh_token"] is True
+    assert "access-secret" not in result.output
+    assert "refresh-secret" not in result.output
+    assert (tmp_path / "token-cache" / ".1688_token_cache.json").exists()
+
+
+def test_browser_profile_open_command_can_be_mocked(monkeypatch, tmp_path):
+    async def mock_open_browser_profile(path, url):
+        return {"status": "ok", "profile_path": str(path), "url": url, "profile_saved": True}
+
+    monkeypatch.setattr("sourcing1688.cli.open_browser_profile", mock_open_browser_profile)
+    result, payload = invoke_json(["browser-profile", "open", "--path", str(tmp_path / "profile")])
+
+    assert result.exit_code == 0
+    assert payload["status"] == "ok"
+    assert payload["profile_saved"] is True
+
+
+def test_distribution_files_are_portable_and_documented():
+    mcp = json.loads((ROOT / ".mcp.codex.json").read_text(encoding="utf-8"))
+    standard_mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    plugin = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    marketplace = json.loads((ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+    claude_plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    claude_marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    skill = (ROOT / "skills" / "sourcing-agent-1688" / "SKILL.md").read_text(encoding="utf-8").lower()
+
+    assert "C:/Users" not in json.dumps(mcp)
+    assert "C:\\Users" not in json.dumps(mcp)
+    assert "mcpServers" in standard_mcp
+    assert plugin["version"] == "0.3.0"
+    assert plugin["name"] == "sourcing-agent-1688"
+    assert plugin["mcpServers"] == "./.mcp.codex.json"
+    assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
+    assert marketplace["plugins"][0]["source"]["source"] == "local"
+    assert marketplace["plugins"][0]["source"]["path"] == "./"
+    assert claude_plugin["name"] == "sourcing-agent-1688"
+    assert claude_plugin["mcpServers"] == "./.mcp.json"
+    assert claude_marketplace["plugins"][0]["source"] == "./"
+    assert "sourcing1688-mcp" in pyproject
+    assert "sourcing-agent-1688" in pyproject
+    assert "uv sync --extra dev" in readme
+    assert "uv run pytest -q -ra" in readme
+    assert "uvx --from" in readme
+    assert "uninstall" in readme
+    assert "sourcing-agent-1688" in skill
+    assert "mock" in skill
+
+
+def test_browser_raw_snapshot_uses_runtime_home(tmp_path):
+    provider = Browser1688Provider(settings=get_settings().model_copy(update={"home": tmp_path}))
+    path = provider._raw_snapshot_path("search")
+
+    assert path.is_relative_to(tmp_path / "raw")
+
+
+def test_install_scripts_normalize_github_url_for_uvx():
+    ps1 = (ROOT / "scripts" / "install-codex-plugin.ps1").read_text(encoding="utf-8")
+    sh = (ROOT / "scripts" / "install-codex-plugin.sh").read_text(encoding="utf-8")
+
+    assert "git+https://" in ps1
+    assert "git+https://" in sh
+    assert "UVX_SOURCE" in ps1
+    assert "UVX_SOURCE" in sh
+
+
+def test_distribution_docs_explain_url_and_local_marketplace_modes():
+    doc = (ROOT / "docs" / "PLUGIN_DISTRIBUTION.md").read_text(encoding="utf-8")
+
+    assert ".mcp.codex.json" in doc
+    assert "Claude" in doc
+    assert 'path: "./"' in doc
+    assert "uv run pytest -q -ra" in doc
