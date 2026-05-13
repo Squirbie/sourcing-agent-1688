@@ -12,7 +12,7 @@ Codex용 파일:
 
 - `plugins/sourcing-agent-1688/.codex-plugin/plugin.json`
 - `.agents/plugins/marketplace.json`
-- `plugins/sourcing-agent-1688/.mcp.codex.json`
+- `plugins/sourcing-agent-1688/.mcp.json`
 - `plugins/sourcing-agent-1688/skills/`
 
 repo root의 `.codex-plugin`, `.mcp.codex.json`, `skills/`는 local/dev 호환용으로 유지합니다. Codex marketplace entry는 앱 UI가 plugin root를 더 명확히 찾도록 `path: "./plugins/sourcing-agent-1688"`를 사용합니다.
@@ -56,7 +56,7 @@ openclaw plugins inspect sourcing-agent-1688
 - Codex: `.mcp.codex.json` (`mcp_servers`)
 - Claude Code / OpenClaw 호환: `.mcp.json` (`mcpServers`)
 
-Codex marketplace bundle의 `.mcp.codex.json`은 GitHub 설치 위치와 무관하게 실행되도록 `uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing1688-mcp` 방식을 사용합니다. root local-dev용 `.mcp.codex.json`은 repo root에서 `uv run`으로 실행하는 개발용 설정입니다.
+Codex marketplace bundle의 `.mcp.json`은 GitHub 설치 위치와 무관하게 실행되도록 `uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing1688-mcp` 방식을 사용합니다. root local-dev용 `.mcp.codex.json`은 repo root에서 `uv run`으로 실행하는 개발용 설정입니다.
 
 직접 MCP fallback 예시:
 

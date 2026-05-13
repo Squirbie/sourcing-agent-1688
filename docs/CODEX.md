@@ -31,7 +31,7 @@ Codex uses:
 
 - `plugins/sourcing-agent-1688/.codex-plugin/plugin.json`
 - `.agents/plugins/marketplace.json`
-- `plugins/sourcing-agent-1688/.mcp.codex.json`
+- `plugins/sourcing-agent-1688/.mcp.json`
 - `plugins/sourcing-agent-1688/skills/`
 
 The root `.codex-plugin`, `.mcp.codex.json`, and `skills/` folders remain for local/dev compatibility.

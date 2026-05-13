@@ -12,7 +12,7 @@
   "keywords": ["1688", "sourcing-agent", "korean-sellers", "mcp", "codex"],
   "readme": "./README.md",
   "skills": "./skills/",
-  "mcpServers": "./.mcp.codex.json",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "1688 Sourcing Agent",
     "shortDescription": "Agent-friendly 1688 sourcing tools for Korean sellers",
