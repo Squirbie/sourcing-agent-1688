@@ -138,6 +138,17 @@ def _copy_plugin_bundle(home: Path) -> dict[str, Any]:
     return {"status": "ok", "source": str(source), "target": str(target), "version": version}
 
 
+def _clear_plugin_cache(home: Path) -> dict[str, Any]:
+    cache = home / "plugins" / "cache" / MARKETPLACE_NAME
+    if not cache.exists():
+        return {"status": "ok", "path": str(cache), "removed": False}
+    try:
+        shutil.rmtree(cache)
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "warning", "path": str(cache), "removed": False, "message": str(exc)}
+    return {"status": "ok", "path": str(cache), "removed": True}
+
+
 def _open_chrome_setup_page() -> dict[str, Any]:
     command = chrome_devtools_setup_command()
     try:
@@ -241,6 +252,7 @@ def install_codex(*, open_chrome_setup: bool = True) -> dict[str, Any]:
 
     steps: dict[str, Any] = {}
     steps["marketplace_add"] = _run(["codex", "plugin", "marketplace", "add", REPO_URL])
+    steps["old_plugin_cache"] = _clear_plugin_cache(home)
     steps["marketplace_upgrade"] = _run(["codex", "plugin", "marketplace", "upgrade", MARKETPLACE_NAME])
     if not steps["marketplace_add"]["ok"] and not steps["marketplace_upgrade"]["ok"]:
         return {
