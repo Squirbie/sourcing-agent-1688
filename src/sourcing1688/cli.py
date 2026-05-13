@@ -144,7 +144,6 @@ def setup_command(
             "provider": "api",
             "home": init["home"],
             "auth_status": auth_status(),
-            "docs": "docs/API_CREDENTIALS.md",
             "next_steps": [
                 "Set ALI1688_APP_KEY and ALI1688_APP_SECRET.",
                 "Run `sourcing1688 auth url --redirect-uri ... --json`.",

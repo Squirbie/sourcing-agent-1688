@@ -1,38 +1,15 @@
 # 1688 Sourcing Agent
 
-Codex Desktop에서 1688 상품을 찾고, 상품 링크를 분석하고, 상세페이지 이미지/영상/HTML을 저장하는 플러그인입니다.
+Codex Desktop에서 `@sourcing-agent-1688`로 호출해서 1688 상품을 찾고, 링크를 분석하고, 상세페이지 자료를 저장하는 플러그인입니다.
 
-## 할 수 있는 일
-
-- 한국어 상품명을 1688 검색어로 바꾸기
-- 1688 상품 검색
-- 1688 상품 링크 분석
-- 상세페이지 이미지, 영상, HTML, 속성 JSON 저장
-- 후보 상품 점수화
-- shortlist 저장과 리포트 export
-
-## 설치
-
-```powershell
-codex plugin marketplace add https://github.com/Squirbie/sourcing-agent-1688.git
-```
-
-그 다음 Codex Desktop에서:
-
-1. 플러그인 화면을 엽니다.
-2. `1688 Sourcing Agent`를 선택합니다.
-3. `Codex에 추가`를 누릅니다.
-4. 새 채팅을 엽니다.
-5. `@sourcing-agent-1688`를 입력해서 플러그인을 부릅니다.
-
-## 바로 써보기
+## 이렇게 말하면 됩니다
 
 ```text
 @sourcing-agent-1688 1688에서 암막우산 찾아줘.
 ```
 
 ```text
-@sourcing-agent-1688 이 상품 링크 분석해줘:
+@sourcing-agent-1688 이 1688 상품 링크 분석해줘:
 https://detail.1688.com/offer/123456789.html
 ```
 
@@ -41,12 +18,31 @@ https://detail.1688.com/offer/123456789.html
 ```
 
 ```text
-@sourcing-agent-1688 provider 준비 상태 확인해줘.
+@sourcing-agent-1688 잘 팔릴 만한 후보를 추천하고 shortlist에 저장해줘.
 ```
 
-## 실제 1688 검색 준비
+## 설치
 
-가장 좋은 방식은 1688 Open Platform API입니다.
+Codex Desktop의 플러그인 추가 화면에서 아래 GitHub repo를 추가합니다.
+
+```text
+https://github.com/Squirbie/sourcing-agent-1688
+```
+
+설치 후 새 채팅에서 `@sourcing-agent-1688`를 입력하면 플러그인을 호출할 수 있습니다.
+
+## 실제 1688 연결
+
+기본 provider는 `auto`입니다.
+
+| provider | 쓰는 상황 | 준비물 |
+|---|---|---|
+| `auto` | 기본값 | API 설정 또는 브라우저 설정 |
+| `api` | 1688 Open Platform API로 검색 | AppKey, AppSecret, access token 또는 refresh token |
+| `browser` | 로그인한 브라우저 세션으로 확인 | 사용자가 직접 로그인한 1688 브라우저 프로필 |
+| `local_html` | 저장해둔 상세페이지 HTML 분석 | 1688 상세페이지 HTML 파일 |
+
+API 키와 토큰은 `open.1688.com / 1688开放平台`에서 앱을 만들고 발급받습니다.
 
 ```powershell
 sourcing1688 auth status --json
@@ -54,17 +50,14 @@ sourcing1688 auth url --redirect-uri "https://example.com/callback" --json
 sourcing1688 auth exchange --code CODE --redirect-uri "https://example.com/callback" --json
 ```
 
-API가 없으면 Codex Desktop의 Chrome/Browser 연결을 우선 사용하세요. 사용자가 이미 로그인한 브라우저 세션을 쓰는 방식이 가장 자연스럽습니다.
-
-CLI만 사용할 때는 별도 브라우저 프로필을 열 수 있습니다.
+API가 없으면 브라우저 방식으로 쓸 수 있습니다. Codex Desktop 안에서는 가능하면 사용자가 이미 열어둔 Chrome 세션을 우선 활용하고, CLI만 사용할 때는 별도 프로필을 열 수 있습니다.
 
 ```powershell
 sourcing1688 browser-profile open --json
+sourcing1688 provider-check --provider browser --json
 ```
 
-열린 브라우저에서 1688에 직접 로그인하고 창을 닫은 뒤 다시 검색합니다.
-
-## CLI 예시
+## CLI
 
 ```powershell
 sourcing1688 provider-check --provider auto --json
@@ -75,18 +68,9 @@ sourcing1688 parse-html path/to/1688-detail.html --json
 sourcing1688 download-assets-from-html path/to/1688-detail.html --dry-run --json
 ```
 
-## Provider
-
-| provider | 용도 |
-|---|---|
-| `auto` | 기본값. API가 있으면 API, 없으면 browser 흐름 사용 |
-| `api` | 1688 Open Platform API |
-| `browser` | 로그인한 브라우저 프로필로 1688 접속 |
-| `local_html` | 저장해둔 상세페이지 HTML 분석 |
-
 ## 저장 위치
 
-기본 런타임 파일은 `SOURCING1688_HOME` 아래에 저장됩니다.
+런타임 데이터는 `SOURCING1688_HOME` 아래에 모입니다.
 
 ```text
 ~/.sourcing1688/
@@ -99,15 +83,8 @@ sourcing1688 download-assets-from-html path/to/1688-detail.html --dry-run --json
 
 ## 삭제
 
-Codex Desktop에서 플러그인을 제거한 뒤, 로컬 상태까지 지우려면:
+Codex Desktop에서는 플러그인 화면에서 제거합니다. 로컬 데이터까지 지우려면:
 
 ```powershell
 sourcing1688 uninstall --yes
 ```
-
-## 참고
-
-- 1688 API 키는 `open.1688.com / 1688开放平台`에서 발급합니다.
-- 앱 생성 후 AppKey/AppSecret을 확인하고 필요한 API 권한을 신청합니다.
-- OAuth로 access token 또는 refresh token을 준비합니다.
-- 로그인이나 확인 화면이 나오면 사용자가 브라우저에서 직접 처리해야 합니다.

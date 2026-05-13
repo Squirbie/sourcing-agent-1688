@@ -1,11 +1,15 @@
 {
   "mcpServers": {
     "sourcing1688": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "sourcing1688.mcp_server"],
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Squirbie/sourcing-agent-1688.git",
+        "sourcing1688-mcp"
+      ],
       "env": {
         "SOURCING1688_PROVIDER": "auto",
-        "SOURCING1688_HOME": "${SOURCING1688_HOME:-~/.sourcing1688}"
+        "SOURCING1688_HOME": "~/.sourcing1688"
       }
     }
   }

@@ -142,48 +142,46 @@ def test_browser_profile_open_command_can_be_mocked(monkeypatch, tmp_path):
     assert payload["profile_saved"] is True
 
 
-def test_distribution_files_are_portable_and_documented():
-    mcp = json.loads((ROOT / ".mcp.codex.json").read_text(encoding="utf-8"))
-    standard_mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+def test_distribution_files_are_root_codex_desktop_plugin_only():
+    mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
     plugin = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    marketplace = json.loads((ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
-    bundle_root = ROOT / "plugins" / "sourcing-agent-1688"
-    bundled_plugin = json.loads((bundle_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    bundled_mcp = json.loads((bundle_root / ".mcp.json").read_text(encoding="utf-8"))
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
     skill = (ROOT / "skills" / "sourcing-agent-1688" / "SKILL.md").read_text(encoding="utf-8").lower()
 
     assert "C:/Users" not in json.dumps(mcp)
     assert "C:\\Users" not in json.dumps(mcp)
-    assert "mcpServers" in standard_mcp
-    assert plugin["version"] == "0.4.0"
+    assert "mcpServers" in mcp
+    assert "mcp_servers" not in mcp
+    assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
+    assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
+    assert plugin["version"] == "0.5.0"
     assert plugin["name"] == "sourcing-agent-1688"
-    assert plugin["mcpServers"] == "./.mcp.codex.json"
-    assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
-    assert marketplace["plugins"][0]["source"]["source"] == "local"
-    assert marketplace["plugins"][0]["source"]["path"] == "./plugins/sourcing-agent-1688"
-    assert marketplace["plugins"][0]["policy"]["installation"] == "AVAILABLE"
-    assert marketplace["plugins"][0]["policy"]["authentication"] == "ON_INSTALL"
-    assert (bundle_root / "README.md").exists()
-    assert (bundle_root / "skills" / "sourcing-agent-1688" / "SKILL.md").exists()
-    assert bundled_plugin["name"] == "sourcing-agent-1688"
-    assert bundled_plugin["mcpServers"] == "./.mcp.json"
-    assert "mcpServers" in bundled_mcp
-    assert "mcp_servers" not in bundled_mcp
-    assert bundled_mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
-    assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in bundled_mcp["mcpServers"]["sourcing1688"]["args"]
+    assert plugin["skills"] == "./skills/"
+    assert plugin["mcpServers"] == "./.mcp.json"
     assert "sourcing1688-mcp" in pyproject
     assert "sourcing-agent-1688" in pyproject
     assert "암막우산" in readme
-    assert "codex plugin marketplace add" in readme
+    assert "@sourcing-agent-1688" in readme
     assert "open.1688.com" in readme
     assert "codex desktop" in readme
     assert "삭제" in readme
-    assert "claude" not in readme
-    assert "openclaw" not in readme
     assert "sourcing-agent-1688" in skill
-    assert "mock" not in readme
+
+
+def test_removed_cross_platform_marketplace_and_demo_files_are_absent():
+    assert not (ROOT / ".agents").exists()
+    assert not (ROOT / "plugins").exists()
+    assert not (ROOT / "docs").exists()
+    assert not (ROOT / "scripts").exists()
+    assert not (ROOT / ".claude-plugin").exists()
+    assert not (ROOT / ".mcp.codex.json").exists()
+    assert not (ROOT / "README.en.md").exists()
+    assert not (ROOT / "src" / "sourcing1688" / "providers" / "mock_provider.py").exists()
+    assert "mock" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    assert "claude" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    assert "openclaw" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    assert "marketplace" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
 
 
 def test_browser_raw_snapshot_uses_runtime_home(tmp_path):
@@ -191,11 +189,3 @@ def test_browser_raw_snapshot_uses_runtime_home(tmp_path):
     path = provider._raw_snapshot_path("search")
 
     assert path.is_relative_to(tmp_path / "raw")
-
-
-def test_distribution_docs_explain_url_and_local_marketplace_modes():
-    doc = (ROOT / "docs" / "PLUGIN_DISTRIBUTION.md").read_text(encoding="utf-8")
-
-    assert "codex desktop" in doc.lower()
-    assert 'path: "./plugins/sourcing-agent-1688"' in doc
-    assert "uv run pytest -q -ra" in doc
