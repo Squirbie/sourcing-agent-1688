@@ -50,12 +50,14 @@ sourcing1688 auth url --redirect-uri "https://example.com/callback" --json
 sourcing1688 auth exchange --code CODE --redirect-uri "https://example.com/callback" --json
 ```
 
-API가 없으면 브라우저 방식으로 쓸 수 있습니다. Codex Desktop 안에서는 가능하면 사용자가 이미 열어둔 Chrome 세션을 우선 활용하고, CLI만 사용할 때는 별도 프로필을 열 수 있습니다.
+API가 없으면 브라우저 방식으로 쓸 수 있습니다. 1688은 headless 브라우저에서 로그인 상태가 다르게 보일 수 있어서 기본값은 눈에 보이는 브라우저입니다.
 
 ```powershell
 sourcing1688 browser-profile open --json
 sourcing1688 provider-check --provider browser --json
 ```
+
+창을 띄우지 않고 시도하려면 `SOURCING1688_BROWSER_HEADLESS=true`를 설정할 수 있지만, 1688이 다시 로그인을 요구할 수 있습니다.
 
 ## CLI
 

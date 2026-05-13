@@ -17,6 +17,8 @@ Use `auto` by default.
 
 If the host Chrome plugin is available, prefer the user's existing Chrome session for live browsing. If the MCP returns `needs_human_login` or `blocked_by_verification`, tell the user to complete that step in the browser and retry.
 
+Avoid repeated live browser calls for the same URL. For a product URL, call `analyze_1688_product_url` first and reuse that result unless the user explicitly asks to download assets.
+
 ## Search Workflow
 
 1. Call `check_1688_provider_capabilities`.
