@@ -43,6 +43,12 @@ https://detail.1688.com/offer/123456789.html
 codex plugin marketplace add https://github.com/Squirbie/sourcing-agent-1688.git
 ```
 
+플러그인까지 바로 켜려면 설치 스크립트를 사용하세요.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install-codex-plugin.ps1 https://github.com/Squirbie/sourcing-agent-1688.git
+```
+
 그 다음:
 
 1. Codex에서 `/plugins`

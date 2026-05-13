@@ -202,6 +202,10 @@ def test_install_scripts_normalize_github_url_for_uvx():
     assert "git+https://" in sh
     assert "UVX_SOURCE" in ps1
     assert "UVX_SOURCE" in sh
+    assert 'sourcing-agent-1688@sourcing-agent-1688-marketplace' in ps1
+    assert 'sourcing-agent-1688@sourcing-agent-1688-marketplace' in sh
+    assert "enabled = true" in ps1
+    assert "enabled = true" in sh
 
 
 def test_distribution_docs_explain_url_and_local_marketplace_modes():
@@ -211,4 +215,5 @@ def test_distribution_docs_explain_url_and_local_marketplace_modes():
     assert "Claude" in doc
     assert 'path: "./plugins/sourcing-agent-1688"' in doc
     assert "direct MCP" in doc
+    assert 'sourcing-agent-1688@sourcing-agent-1688-marketplace' in doc
     assert "uv run pytest -q -ra" in doc
