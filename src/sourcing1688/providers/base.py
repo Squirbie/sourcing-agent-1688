@@ -10,7 +10,7 @@ from sourcing1688.models import AssetDownloadResponse, DetailResponse, HotKeywor
 class Base1688Provider(ABC):
     name: str = "base"
     provider_version: str = "0.1.0"
-    source_type: str = "mock"
+    source_type: str = "base"
 
     def capabilities(self) -> ProviderCapability:
         return ProviderCapability(provider=self.name, provider_version=self.provider_version, source_type=self.source_type)  # type: ignore[arg-type]

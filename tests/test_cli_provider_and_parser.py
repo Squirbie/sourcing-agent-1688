@@ -16,17 +16,16 @@ def test_providers_cli_json_lists_capabilities():
 
     assert result.exit_code == 0
     assert payload["status"] == "ok"
-    assert {"mock", "api", "browser", "local_html"}.issubset(payload["providers"])
+    assert {"auto", "api", "browser", "local_html"}.issubset(payload["providers"])
+    assert "mock" not in payload["providers"]
 
 
-def test_provider_check_mock_json():
-    result = runner.invoke(app, ["provider-check", "--provider", "mock", "--json"])
+def test_provider_check_auto_json(tmp_path):
+    result = runner.invoke(app, ["provider-check", "--provider", "auto", "--json"], env={"SOURCING1688_HOME": str(tmp_path)})
     payload = json.loads(result.output)
 
     assert result.exit_code == 0
-    assert payload["status"] == "ok"
-    assert payload["provider"] == "mock"
-    assert payload["ready"] is True
+    assert payload["provider"] == "auto"
     assert payload["live_verified"] is False
     assert payload["capabilities"]["search"] is True
 
@@ -81,7 +80,7 @@ def test_download_assets_cli_dry_run_json(tmp_path, monkeypatch):
     monkeypatch.setattr("sourcing1688.assets.downloader._download_url", fail_if_called)
     result = runner.invoke(
         app,
-        ["download-assets", "123456789", "--provider", "mock", "--out", str(tmp_path), "--dry-run", "--json"],
+        ["download-assets", str(FIXTURES / "singlefile_detail_sample.html"), "--provider", "local_html", "--out", str(tmp_path), "--dry-run", "--json"],
     )
     payload = json.loads(result.output)
 
@@ -97,7 +96,7 @@ def test_download_assets_default_out_uses_home_assets(tmp_path, monkeypatch):
     monkeypatch.setattr("sourcing1688.assets.downloader._download_url", fail_if_called)
     result = runner.invoke(
         app,
-        ["download-assets", "123456789", "--provider", "mock", "--dry-run", "--json"],
+        ["download-assets", str(FIXTURES / "singlefile_detail_sample.html"), "--provider", "local_html", "--dry-run", "--json"],
         env={"SOURCING1688_HOME": str(tmp_path)},
     )
     payload = json.loads(result.output)
@@ -107,10 +106,12 @@ def test_download_assets_default_out_uses_home_assets(tmp_path, monkeypatch):
     assert Path(payload["manifest"]["saved_dir"]).is_relative_to(tmp_path / "assets")
 
 
-def test_image_search_mock_cli_json():
-    result = runner.invoke(app, ["image-search", "--image-url", "https://cbu01.alicdn.com/img/ibank/O1CN.jpg", "--provider", "mock", "--json"])
+def test_image_search_api_without_credentials_json(monkeypatch):
+    for key in ["ALI1688_APP_KEY", "ALI1688_APP_SECRET", "ALI1688_REFRESH_TOKEN", "ALI1688_ACCESS_TOKEN"]:
+        monkeypatch.delenv(key, raising=False)
+    result = runner.invoke(app, ["image-search", "--image-url", "https://cbu01.alicdn.com/img/ibank/O1CN.jpg", "--provider", "api", "--json"])
     payload = json.loads(result.output)
 
     assert result.exit_code == 0
-    assert payload["status"] == "ok"
-    assert payload["items"][0]["offer_id"] == "222333444"
+    assert payload["status"] == "missing_credentials"
+    assert payload["error"]["code"] == "missing_credentials"

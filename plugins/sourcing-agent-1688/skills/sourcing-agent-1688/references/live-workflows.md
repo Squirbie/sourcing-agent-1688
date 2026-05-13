@@ -6,7 +6,7 @@
 2. If Korean input, call `expand_sourcing_keywords`.
 3. Prefer API provider when credentials are configured.
 4. Otherwise use browser provider only when a human-managed profile exists.
-5. If neither live provider is ready, return the structured provider status. Do not replace it with mock unless the user explicitly requests mock/demo data.
+5. If neither live provider is ready, return the structured provider status and guide browser profile or API setup.
 6. Score candidates and show `live_verified`, `source_provider`, `missing_fields`, and risks.
 
 ## URL Analysis
@@ -28,9 +28,8 @@
 
 1. Prefer API provider.
 2. Browser ranking currently returns `live_not_verified` unless a reachable ranking/XHR workflow is confirmed.
-3. Mock ranking/hot keywords are fixture data only.
+3. If ranking or hot keyword access is unavailable, return the provider status clearly.
 
 ## Verification/Login Failure
 
 Return `needs_human_login` or `blocked_by_verification` with `needs_human_action=true`. Never bypass CAPTCHA, verification, anti-bot checks, or login controls.
-

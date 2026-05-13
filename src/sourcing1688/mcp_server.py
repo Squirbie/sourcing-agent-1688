@@ -6,6 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from sourcing1688.browser_profile import open_browser_profile
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.parsers.rendered_html import parse_rendered_html_file
@@ -118,7 +119,7 @@ async def image_search_1688_products(
     top: int = 20,
     provider: str | None = None,
 ) -> dict[str, Any]:
-    """Search 1688 by image. API provider is live-capable; mock provider is fixture-backed; browser is unavailable."""
+    """Search 1688 by image. API provider is live-capable; browser support is unavailable."""
     try:
         return jsonable(await image_search_products(image_url=image_url, image_path=image_path, top=top, provider_name=provider))
     except Exception as exc:  # noqa: BLE001
@@ -144,6 +145,15 @@ async def check_1688_browser_profile() -> dict[str, Any]:
     if hasattr(provider, "check_profile"):
         return await provider.check_profile()
     return error_payload("provider_unavailable", "Browser provider profile check is unavailable.", status="provider_unavailable")
+
+
+@mcp.tool()
+async def open_1688_browser_profile(url: str = "https://www.1688.com") -> dict[str, Any]:
+    """Open the default browser profile so the user can log in to 1688 manually. The call returns after the browser window is closed."""
+    try:
+        return await open_browser_profile(get_settings().browser_profile or get_settings().home / "browser-profile", url=url)
+    except Exception as exc:  # noqa: BLE001
+        return error_payload("browser_profile_open_failed", str(exc), status="provider_unavailable")
 
 
 @mcp.tool()

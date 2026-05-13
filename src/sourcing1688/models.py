@@ -20,7 +20,7 @@ Status = Literal[
     "dry_run",
 ]
 
-SourceType = Literal["mock", "api", "browser", "local_html", "auto"]
+SourceType = Literal["api", "browser", "local_html", "auto"]
 
 
 class JsonModel(BaseModel):

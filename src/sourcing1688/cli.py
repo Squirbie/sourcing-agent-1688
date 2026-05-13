@@ -42,7 +42,7 @@ app.add_typer(auth_app, name="auth")
 
 
 JsonOption = Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")]
-ProviderOption = Annotated[str | None, typer.Option("--provider", help="Provider: auto, mock, api, browser, or local_html.")]
+ProviderOption = Annotated[str | None, typer.Option("--provider", help="Provider: auto, api, browser, or local_html.")]
 
 
 def _echo_json(payload, *, exit_code: int = 0) -> None:
@@ -437,8 +437,8 @@ def browser_profile_init_command(
     result = {
         "status": "ok",
         "profile_path": str(path),
-        "message": "Browser profile directory created. Open 1688 manually and complete login/verification; no bypass is attempted.",
-        "suggested_action": "Set SOURCING1688_BROWSER_PROFILE to this path before using provider=browser.",
+        "message": "Browser profile directory created.",
+        "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then use provider=auto or provider=browser.",
     }
     if json_output:
         _echo_json(result)

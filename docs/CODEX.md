@@ -36,4 +36,4 @@ Codex uses:
 
 The root `.codex-plugin`, `.mcp.codex.json`, and `skills/` folders remain for local/dev compatibility.
 
-Use `mock` only for demo/test prompts.
+Use `auto` for normal use. If API credentials are missing, set up the browser profile flow.

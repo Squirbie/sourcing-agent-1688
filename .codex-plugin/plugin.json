@@ -1,6 +1,6 @@
 {
   "name": "sourcing-agent-1688",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "1688 product sourcing agent tools for Korean sellers",
   "author": {
     "name": "sourcing1688 contributors",
@@ -16,14 +16,14 @@
   "interface": {
     "displayName": "1688 Sourcing Agent",
     "shortDescription": "Agent-friendly 1688 sourcing tools for Korean sellers",
-    "longDescription": "JSON-first CLI and MCP tools for targeted 1688 sourcing research, detail analysis, asset manifests, scoring, and shortlist export.",
+    "longDescription": "MCP and CLI tools for targeted 1688 sourcing research, detail analysis, asset manifests, scoring, and shortlist export.",
     "developerName": "sourcing1688 contributors",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "defaultPrompt": [
       "Use 1688 Sourcing Agent to check provider readiness.",
-      "Use 1688 Sourcing Agent to find sourcing candidates for 암막우산.",
-      "Use 1688 Sourcing Agent to analyze this 1688 product URL.",
+      "Use 1688 Sourcing Agent to open browser profile setup when API credentials are missing.",
+      "Use 1688 Sourcing Agent to find live sourcing candidates with auto or browser provider.",
       "Use 1688 Sourcing Agent to download product assets."
     ],
     "brandColor": "#2563EB"

@@ -4,15 +4,12 @@
 
 ## 플러그인/에이전트 문서
 
-- Claude Code plugin docs: https://code.claude.com/docs/en/plugins
-- Claude Code plugin marketplace docs: https://code.claude.com/docs/en/plugin-marketplaces
-- OpenClaw plugin bundle docs: https://docs.openclaw.ai/plugins/bundles
 
 ## 1688 관련 참고 repo
 
-- OpenClaw 1688 product search skill: https://github.com/openclaw/skills/tree/main/skills/1688aiinfra/1688-product-search
+- 1688 product search skill reference: https://github.com/openclaw/skills/tree/main/skills/1688aiinfra/1688-product-search
   - API형 검색, field normalization, sort/filter 설계 참고
-- OpenClaw 1688 ranking skill: https://github.com/openclaw/skills/tree/main/skills/1688aiinfra/1688-ranking
+- 1688 ranking skill reference: https://github.com/openclaw/skills/tree/main/skills/1688aiinfra/1688-ranking
   - 인기 키워드와 랭킹 workflow 참고
 - jiyun/1688: https://github.com/jiyun/1688
   - 저장된 상세페이지 HTML, 이미지/영상/속성 추출 workflow 참고

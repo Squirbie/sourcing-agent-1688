@@ -46,7 +46,7 @@
     "https://example.com/assets/123456789-video.mp4"
   ],
   "raw_source_summary": {
-    "provider": "mock",
+    "provider": "fixture",
     "fixture": "product_detail_sample.json"
   },
   "missing_fields": []

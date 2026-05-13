@@ -33,3 +33,4 @@ def test_mcp_server_registers_expected_tools():
     assert "image_search_1688_products" in tool_names
     assert "check_1688_provider_capabilities" in tool_names
     assert "check_1688_browser_profile" in tool_names
+    assert "open_1688_browser_profile" in tool_names

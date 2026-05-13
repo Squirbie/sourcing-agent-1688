@@ -1,99 +1,62 @@
-# 플러그인 배포 메모
+# Codex Desktop 배포 메모
 
-제품 이름은 `1688 Sourcing Agent`이고, repo는 아래 주소를 기준으로 합니다.
+이 repo는 Codex Desktop 전용 플러그인으로 배포합니다.
 
 ```text
 https://github.com/Squirbie/sourcing-agent-1688
 ```
 
-## Codex
-
-Codex용 파일:
-
-- `plugins/sourcing-agent-1688/.codex-plugin/plugin.json`
-- `.agents/plugins/marketplace.json`
-- `plugins/sourcing-agent-1688/.mcp.json`
-- `plugins/sourcing-agent-1688/skills/`
-
-repo root의 `.codex-plugin`, `.mcp.codex.json`, `skills/`는 local/dev 호환용으로 유지합니다. Codex marketplace entry는 앱 UI가 plugin root를 더 명확히 찾도록 `path: "./plugins/sourcing-agent-1688"`를 사용합니다.
-
-설치:
+## 설치
 
 ```powershell
 codex plugin marketplace add https://github.com/Squirbie/sourcing-agent-1688.git
 ```
 
-그 다음 Codex 앱에서 `/plugins`를 열고 `1688 Sourcing Agent`를 선택한 뒤 `Codex에 추가`를 클릭합니다.
+Codex Desktop에서 `1688 Sourcing Agent`를 선택하고 `Codex에 추가`를 누릅니다.
 
-설치 스크립트는 marketplace 등록과 local runtime 초기화를 한 번에 실행하는 보조 도구입니다.
+## Plugin bundle
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/install-codex-plugin.ps1 https://github.com/Squirbie/sourcing-agent-1688.git
+Codex marketplace가 읽는 실제 플러그인 root:
+
+```text
+plugins/sourcing-agent-1688/
 ```
 
-```bash
-./scripts/install-codex-plugin.sh https://github.com/Squirbie/sourcing-agent-1688.git
+Marketplace source path:
+
+```text
+path: "./plugins/sourcing-agent-1688"
 ```
 
-스크립트는 현재 Codex CLI에 plugin install 명령이 없는 환경을 위해 다음 enabled 블록도 추가합니다.
+필수 파일:
 
-```toml
-[plugins."sourcing-agent-1688@sourcing-agent-1688-marketplace"]
-enabled = true
+```text
+plugins/sourcing-agent-1688/.codex-plugin/plugin.json
+plugins/sourcing-agent-1688/.mcp.json
+plugins/sourcing-agent-1688/skills/sourcing-agent-1688/SKILL.md
+plugins/sourcing-agent-1688/README.md
 ```
 
-Codex 앱을 재시작한 뒤 새 채팅에서 `@1688 Sourcing Agent`를 사용합니다.
+## MCP
 
-앱에 보이지 않으면 Codex 앱을 완전히 재시작한 뒤 marketplace를 remove/add로 다시 받아오세요. private repo는 앱 UI가 Git credential을 CLI와 다르게 다룰 수 있으니, 빠른 확인은 public 테스트나 local marketplace/direct MCP 연결을 권장합니다.
+Codex plugin bundle의 MCP 설정은 GitHub 설치에서도 동작하도록 `uvx`를 사용합니다.
 
-## Claude Code
-
-Claude Code용 파일:
-
-- `.claude-plugin/plugin.json`
-- `.claude-plugin/marketplace.json`
-- `.mcp.json`
-
-설치 예시:
-
-```powershell
-claude plugin marketplace add Squirbie/sourcing-agent-1688
-claude plugin install sourcing-agent-1688@sourcing-agent-1688-marketplace
+```json
+{
+  "mcpServers": {
+    "sourcing1688": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Squirbie/sourcing-agent-1688.git",
+        "sourcing1688-mcp"
+      ]
+    }
+  }
+}
 ```
 
-## OpenClaw
-
-OpenClaw는 Codex/Claude bundle marker와 stdio MCP 구성을 읽는 방식으로 사용할 수 있습니다. 환경마다 명령 이름이 다를 수 있으니 설치 전 `openclaw plugins --help`를 확인하세요.
-
-```powershell
-openclaw plugins install https://github.com/Squirbie/sourcing-agent-1688.git
-openclaw plugins inspect sourcing-agent-1688
-```
-
-## MCP 파일 차이
-
-- Codex local/dev config: `.mcp.codex.json` (`mcp_servers`)
-- Codex plugin bundle: `plugins/sourcing-agent-1688/.mcp.json` (`mcpServers`)
-- Claude Code / OpenClaw 호환: `.mcp.json` (`mcpServers`)
-
-Codex marketplace bundle의 `.mcp.json`은 `mcpServers` camelCase를 사용하고, GitHub 설치 위치와 무관하게 실행되도록 `uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing1688-mcp` 방식을 사용합니다. root local-dev용 `.mcp.codex.json`은 repo root에서 `uv run`으로 실행하는 개발용 설정입니다.
-
-직접 MCP fallback 예시:
-
-```toml
-[mcp_servers.sourcing1688]
-command = "uv"
-args = ["run", "sourcing1688-mcp"]
-cwd = "C:/path/to/sourcing-agent-1688"
-startup_timeout_sec = 60
-tool_timeout_sec = 120
-
-[mcp_servers.sourcing1688.env]
-SOURCING1688_PROVIDER = "auto"
-SOURCING1688_HOME = "~/.sourcing1688"
-```
-
-## 로컬 검증
+## 검증
 
 ```powershell
 uv sync --extra dev
@@ -104,8 +67,8 @@ uvx --from . sourcing1688-mcp --help
 
 ## 삭제
 
+Codex Desktop에서 플러그인을 제거합니다. 로컬 런타임 상태까지 지우려면:
+
 ```powershell
-codex plugin marketplace remove sourcing-agent-1688-marketplace
-claude plugin uninstall sourcing-agent-1688 --prune
 sourcing1688 uninstall --yes
 ```

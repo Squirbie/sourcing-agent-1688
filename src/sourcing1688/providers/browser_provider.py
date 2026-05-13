@@ -50,8 +50,8 @@ class Browser1688Provider(Base1688Provider):
             hot_keywords=True,
             rankings=True,
             image_search=False,
-            required_env=["SOURCING1688_BROWSER_PROFILE"],
-            notes=["Uses a human-managed Playwright persistent profile. Live parsers are implemented but not verified in this environment."],
+            required_env=["SOURCING1688_BROWSER_PROFILE optional; defaults to SOURCING1688_HOME/browser-profile"],
+            notes=["Uses a human-managed Playwright persistent profile. If the profile is missing, open it with `sourcing1688 browser-profile open --json` and log in manually."],
         )
 
     def detect_block_state_from_text(self, url: str, title: str, html: str) -> tuple[str | None, str | None]:
@@ -68,10 +68,10 @@ class Browser1688Provider(Base1688Provider):
 
     def _profile_missing(self, response_type):
         if self.settings.browser_profile:
-            message = "Configured SOURCING1688_BROWSER_PROFILE path does not exist."
+            message = "Browser profile path does not exist yet."
         else:
-            message = "SOURCING1688_BROWSER_PROFILE is required for browser provider."
-        suggested_action = "Run `sourcing1688 browser-profile init --path data/browser-profile`, log in manually, set SOURCING1688_BROWSER_PROFILE, then retry."
+            message = "Browser profile path is not configured."
+        suggested_action = "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually in the opened browser, close the browser, then retry."
         return response_type(
             status="needs_human_login",
             message=message,
@@ -173,9 +173,11 @@ class Browser1688Provider(Base1688Provider):
             snapshot_path = self._raw_snapshot_path("search")
             snapshot_path.write_text(html, encoding="utf-8")
             if status:
-                return SearchResponse(status=status, message=message, needs_human_action=status != "provider_unavailable", error=structured_error(status, message or status, needs_human_action=status != "provider_unavailable"), provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path))
+                suggested_action = "Complete the login or verification manually in the browser profile, then retry. No bypass is attempted."
+                return SearchResponse(status=status, message=message, needs_human_action=status != "provider_unavailable", suggested_action=suggested_action, error=structured_error(status, message or status, needs_human_action=status != "provider_unavailable", suggested_action=suggested_action), provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path), keyword=keyword)
             items = self._parse_search_dom(html, keyword, page_size)
-            return SearchResponse(status="ok" if items else "partial_data", items=items, keyword=keyword, provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path), warnings=["Browser search parser is implemented but live result structure is not verified in this environment."])
+            message = None if items else "Browser opened 1688, but no product cards were parsed. Login may be incomplete, verification may be required, or the 1688 page structure may have changed."
+            return SearchResponse(status="ok" if items else "partial_data", message=message, items=items, keyword=keyword, provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path), warnings=["Browser search parser is implemented but live result structure is not verified in this environment."])
         finally:
             await context.close()
             await playwright.stop()
@@ -203,7 +205,7 @@ class Browser1688Provider(Base1688Provider):
                     image = img.get("src") or img.get("data-src")
                     if image and str(image).startswith("//"):
                         image = f"https:{image}"
-            items.append(ProductSearchResult(offer_id=offer_id, url=f"https://detail.1688.com/offer/{offer_id}.html", title_zh=title, image_url=image, source_keyword=keyword, provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, warnings=["DOM fallback parsed; fields may be partial."]))
+            items.append(ProductSearchResult(offer_id=offer_id, url=f"https://detail.1688.com/offer/{offer_id}.html", title_zh=title, image_url=image, source_keyword=keyword, provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, warnings=["DOM parsed; fields may be partial."]))
             if len(items) >= limit:
                 break
         return items
@@ -228,7 +230,8 @@ class Browser1688Provider(Base1688Provider):
             snapshot_path = self._raw_snapshot_path(f"detail-{offer_id}")
             snapshot_path.write_text(html, encoding="utf-8")
             if status:
-                return DetailResponse(status=status, message=message, needs_human_action=True, error=structured_error(status, message or status, needs_human_action=True), provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path))
+                suggested_action = "Complete the login or verification manually in the browser profile, then retry. No bypass is attempted."
+                return DetailResponse(status=status, message=message, needs_human_action=True, suggested_action=suggested_action, error=structured_error(status, message or status, needs_human_action=True, suggested_action=suggested_action), provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path))
             parsed = parse_rendered_html(html, source_path=snapshot_path)
             if parsed.item:
                 parsed.item.provider = self.name

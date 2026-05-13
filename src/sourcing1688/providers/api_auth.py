@@ -67,7 +67,7 @@ class ApiAuthManager:
             return None, StructuredError(
                 code="missing_credentials",
                 message="ALI1688_APP_KEY, ALI1688_APP_SECRET, and ALI1688_REFRESH_TOKEN or ALI1688_ACCESS_TOKEN are required.",
-                suggested_action="Set API credentials or use provider=mock/browser/local_html.",
+                suggested_action="Set API credentials or use provider=browser/local_html.",
             )
         return await self.refresh_access_token()
 

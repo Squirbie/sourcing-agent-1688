@@ -42,6 +42,6 @@ SOURCING1688_HOME/token-cache/.1688_token_cache.json
 
 ## API가 아직 없다면
 
-- 설치 확인과 데모는 `mock` provider로 가능합니다.
+- API가 없으면 `browser` provider 또는 `local_html` 방식을 사용하세요.
 - 사용자가 직접 로그인한 브라우저 프로필이 있으면 `browser` provider를 사용할 수 있습니다.
 - 이미 저장해둔 상세페이지 HTML이 있으면 `local_html` provider로 분석할 수 있습니다.

@@ -24,7 +24,7 @@ PROVIDER_VERSION = "0.2.0"
 
 
 class Auto1688Provider(Base1688Provider):
-    """Resolve to an explicitly configured live provider without falling back to mock."""
+    """Resolve to API when available, otherwise browser."""
 
     name = "auto"
     provider_version = PROVIDER_VERSION
@@ -45,20 +45,18 @@ class Auto1688Provider(Base1688Provider):
             hot_keywords=True,
             rankings=True,
             image_search=True,
-            required_env=["ALI1688 credentials or SOURCING1688_BROWSER_PROFILE"],
-            notes=["Chooses api when API credentials exist, then browser when a profile path is configured. It never falls back to mock."],
+            required_env=["ALI1688 credentials or a human-managed browser profile"],
+            notes=["Chooses api when API credentials exist. Otherwise it uses the browser provider and asks the user to create/login a browser profile when needed."],
         )
 
     def resolve(self) -> Base1688Provider | None:
         if ApiAuthManager(self.settings).has_any_credentials():
             return Api1688Provider(settings=self.settings)
-        if self.settings.browser_profile and Path(self.settings.browser_profile).exists():
-            return Browser1688Provider(settings=self.settings)
-        return None
+        return Browser1688Provider(settings=self.settings)
 
     def _missing_live_provider(self, response_type):
-        message = "No live 1688 provider is configured; auto will not fall back to mock."
-        suggested_action = "Set ALI1688 credentials, configure SOURCING1688_BROWSER_PROFILE, or explicitly use provider=mock for demo data."
+        message = "No live 1688 provider is configured."
+        suggested_action = "Set ALI1688 credentials or open a human-managed browser profile with `sourcing1688 browser-profile open --json`."
         return response_type(
             status="provider_unavailable",
             message=message,

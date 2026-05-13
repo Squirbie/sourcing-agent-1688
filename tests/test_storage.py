@@ -20,7 +20,7 @@ def test_storage_saves_shortlist_and_exports_json(tmp_path):
         risks=[],
         missing_fields=[],
         suggested_next_action="샘플 구매 전 상세 옵션 확인",
-        sourcing_notes=["mock fixture"],
+        sourcing_notes=["fixture data"],
     )
 
     storage.save_search_results("umbrellas", "黑胶伞", [product])

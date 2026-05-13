@@ -9,18 +9,19 @@ Use this skill when the user asks to find, analyze, compare, recommend, shortlis
 
 ## Provider Selection
 
-Read `references/provider-capabilities.md` when choosing a provider. Use mock only for demo/test data or when the user explicitly asks for mock. For real 1688 requests, explicitly use one of `auto`, `api`, `browser`, or `local_html`:
+Read `references/provider-capabilities.md` when choosing a provider. For real 1688 requests, use `auto` unless the user selected `api`, `browser`, or `local_html`.
 
-1. Call `check_1688_provider_capabilities` for the intended provider, or `auto` if the user did not choose.
-2. If the check returns `ready: false`, do not search. Tell the user the required env/profile/login action from `suggested_action`.
-3. Prefer `api` when credentials are present.
-4. Otherwise use `browser` when `SOURCING1688_BROWSER_PROFILE` is configured and the user can handle login/verification manually.
-5. Use `local_html` when the user provides a rendered/SingleFile HTML file.
-6. If no live provider is ready, return the structured provider status instead of silently using mock.
+1. Call `check_1688_provider_capabilities` for `auto` or the selected provider.
+2. Prefer `api` when credentials are present.
+3. If API credentials are missing and a host Chrome/Browser tool is available, prefer the user's existing browser session.
+4. If no host browser tool is available, use `browser`.
+5. If the browser profile is missing, call or suggest `open_1688_browser_profile` so the user can log in manually, then retry.
+6. Use `local_html` when the user provides a rendered/SingleFile HTML file.
+7. Return the structured provider status when setup or verification is required.
 
-Never use mock for a real sourcing request unless the user explicitly asks for demo/mock data. If a result has `live_verified=false`, do not describe it as a verified live 1688 result.
+If a result has `live_verified=false`, do not describe it as a verified live 1688 result.
 
-If API setup is required, guide the user to `sourcing1688 auth status`, `sourcing1688 auth url`, `sourcing1688 auth exchange`, and `docs/API_CREDENTIALS.md`. If browser setup is required, guide the user to `sourcing1688 browser-profile open` so they can complete login/verification manually.
+If API setup is required, guide the user to `sourcing1688 auth status`, `sourcing1688 auth url`, `sourcing1688 auth exchange`, and `docs/API_CREDENTIALS.md`. If browser setup is required inside Codex and a Chrome/Browser plugin is available, use that first. Otherwise use `open_1688_browser_profile` when available or guide the user to `sourcing1688 browser-profile open --json` so they can log in manually.
 
 Downloads should save under `SOURCING1688_HOME/assets` unless the user explicitly chooses another output directory. Results must always show `provider` and `live_verified`.
 
@@ -31,7 +32,7 @@ For fields and scoring meaning, read `references/1688-fields.md`. For live proce
 When the user gives a Korean product keyword:
 
 1. Call `check_1688_provider_capabilities` with `provider="auto"` or the selected live provider.
-2. Stop if `ready` is false; explain the needed setup.
+2. If API is missing and browser setup is needed, open or guide the browser profile login flow.
 3. Call `expand_sourcing_keywords`.
 4. Search each Chinese keyword with `search_1688_products`.
 5. Deduplicate by `offer_id`.
@@ -67,7 +68,7 @@ When the user gives a 1688 detail URL:
 
 When the user asks to save images, videos, detail page, HTML, or assets:
 
-1. Call `download_1688_product_assets`. Use `dry_run=true` for preflight or fixture/demo workflows where external downloads should not happen.
+1. Call `download_1688_product_assets`. Use `dry_run=true` when the user wants to preview what would be saved before downloading files.
 2. Return `saved_dir`, `manifest_path`, counts, and `failed_assets`.
 3. When `dry_run_assets` are present, say downloads were planned but not fetched.
 4. Do not hide failed downloads.

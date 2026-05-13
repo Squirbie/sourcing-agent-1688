@@ -3,40 +3,14 @@ import pytest
 from sourcing1688.providers.api_provider import Api1688Provider
 from sourcing1688.providers.base import Base1688Provider
 from sourcing1688.providers.browser_provider import Browser1688Provider
-from sourcing1688.providers.mock_provider import Mock1688Provider
 
 
-def test_mock_provider_implements_base_contract():
-    provider = Mock1688Provider()
+def test_live_providers_implement_base_contract():
+    api = Api1688Provider()
+    browser = Browser1688Provider()
 
-    assert isinstance(provider, Base1688Provider)
-
-
-def test_mock_provider_uses_packaged_fixtures_by_default():
-    provider = Mock1688Provider()
-
-    assert provider.fixture_dir is None
-    assert provider._read_json("search_result_sample.json")["items"][0]["offer_id"] == "123456789"
-
-
-@pytest.mark.anyio
-async def test_mock_provider_returns_fixture_search_and_detail():
-    provider = Mock1688Provider()
-
-    search = await provider.search_products("암막우산", page_size=1)
-    detail = await provider.get_product_detail("123456789")
-    hot = await provider.get_hot_keywords(limit=2)
-
-    assert search.status == "ok"
-    assert search.live_verified is False
-    assert search.items[0].live_verified is False
-    assert search.items[0].offer_id == "123456789"
-    assert detail.status == "ok"
-    assert detail.live_verified is False
-    assert detail.item.offer_id == "123456789"
-    assert detail.item.live_verified is False
-    assert hot.live_verified is False
-    assert len(hot.items) == 2
+    assert isinstance(api, Base1688Provider)
+    assert isinstance(browser, Base1688Provider)
 
 
 @pytest.mark.anyio
@@ -44,6 +18,7 @@ async def test_api_provider_without_credentials_returns_missing_credentials(monk
     monkeypatch.delenv("ALI1688_APP_KEY", raising=False)
     monkeypatch.delenv("ALI1688_APP_SECRET", raising=False)
     monkeypatch.delenv("ALI1688_REFRESH_TOKEN", raising=False)
+    monkeypatch.delenv("ALI1688_ACCESS_TOKEN", raising=False)
     provider = Api1688Provider()
 
     result = await provider.search_products("黑胶伞")

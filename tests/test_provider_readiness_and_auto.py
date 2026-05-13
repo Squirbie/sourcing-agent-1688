@@ -35,7 +35,7 @@ def test_provider_check_browser_without_profile_is_not_ready(monkeypatch, tmp_pa
     assert payload["error"]["code"] == "needs_human_login"
 
 
-def test_auto_provider_without_live_access_returns_structured_error(monkeypatch, tmp_path):
+def test_auto_provider_without_live_access_routes_to_browser_setup(monkeypatch, tmp_path):
     for key in ["ALI1688_APP_KEY", "ALI1688_APP_SECRET", "ALI1688_REFRESH_TOKEN", "ALI1688_ACCESS_TOKEN", "SOURCING1688_BROWSER_PROFILE"]:
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path / "missing-home"))
@@ -44,13 +44,13 @@ def test_auto_provider_without_live_access_returns_structured_error(monkeypatch,
     payload = json.loads(result.output)
 
     assert result.exit_code == 0
-    assert payload["status"] == "provider_unavailable"
-    assert payload["error"]["code"] == "missing_live_provider"
-    assert payload["provider"] == "auto"
+    assert payload["status"] == "needs_human_login"
+    assert payload["error"]["code"] == "needs_human_login"
+    assert payload["provider"] == "browser"
     assert payload["items"] == []
 
 
-def test_auto_provider_never_silently_falls_back_to_mock(monkeypatch, tmp_path):
+def test_auto_provider_routes_missing_credentials_to_browser_setup(monkeypatch, tmp_path):
     for key in ["ALI1688_APP_KEY", "ALI1688_APP_SECRET", "ALI1688_REFRESH_TOKEN", "ALI1688_ACCESS_TOKEN", "SOURCING1688_BROWSER_PROFILE"]:
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path / "missing-home"))
@@ -59,7 +59,7 @@ def test_auto_provider_never_silently_falls_back_to_mock(monkeypatch, tmp_path):
     payload = json.loads(result.output)
 
     assert result.exit_code == 0
-    assert payload["status"] == "provider_unavailable"
-    assert payload["selected_provider"] is None
+    assert payload["status"] == "needs_human_login"
+    assert payload["selected_provider"] == "browser"
     assert payload["ready"] is False
-    assert payload["error"]["code"] == "missing_live_provider"
+    assert payload["error"]["code"] == "needs_human_login"

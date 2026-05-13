@@ -150,8 +150,6 @@ def test_distribution_files_are_portable_and_documented():
     bundle_root = ROOT / "plugins" / "sourcing-agent-1688"
     bundled_plugin = json.loads((bundle_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     bundled_mcp = json.loads((bundle_root / ".mcp.json").read_text(encoding="utf-8"))
-    claude_plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    claude_marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
     skill = (ROOT / "skills" / "sourcing-agent-1688" / "SKILL.md").read_text(encoding="utf-8").lower()
@@ -159,7 +157,7 @@ def test_distribution_files_are_portable_and_documented():
     assert "C:/Users" not in json.dumps(mcp)
     assert "C:\\Users" not in json.dumps(mcp)
     assert "mcpServers" in standard_mcp
-    assert plugin["version"] == "0.3.2"
+    assert plugin["version"] == "0.4.0"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["mcpServers"] == "./.mcp.codex.json"
     assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
@@ -175,18 +173,17 @@ def test_distribution_files_are_portable_and_documented():
     assert "mcp_servers" not in bundled_mcp
     assert bundled_mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in bundled_mcp["mcpServers"]["sourcing1688"]["args"]
-    assert claude_plugin["name"] == "sourcing-agent-1688"
-    assert claude_plugin["mcpServers"] == "./.mcp.json"
-    assert claude_marketplace["plugins"][0]["source"] == "./"
     assert "sourcing1688-mcp" in pyproject
     assert "sourcing-agent-1688" in pyproject
     assert "암막우산" in readme
     assert "codex plugin marketplace add" in readme
     assert "open.1688.com" in readme
-    assert "이 repo를 codex" in readme
-    assert "uninstall" in readme
+    assert "codex desktop" in readme
+    assert "삭제" in readme
+    assert "claude" not in readme
+    assert "openclaw" not in readme
     assert "sourcing-agent-1688" in skill
-    assert "mock" in skill
+    assert "mock" not in readme
 
 
 def test_browser_raw_snapshot_uses_runtime_home(tmp_path):
@@ -196,26 +193,9 @@ def test_browser_raw_snapshot_uses_runtime_home(tmp_path):
     assert path.is_relative_to(tmp_path / "raw")
 
 
-def test_install_scripts_normalize_github_url_for_uvx():
-    ps1 = (ROOT / "scripts" / "install-codex-plugin.ps1").read_text(encoding="utf-8")
-    sh = (ROOT / "scripts" / "install-codex-plugin.sh").read_text(encoding="utf-8")
-
-    assert "git+https://" in ps1
-    assert "git+https://" in sh
-    assert "UVX_SOURCE" in ps1
-    assert "UVX_SOURCE" in sh
-    assert 'sourcing-agent-1688@sourcing-agent-1688-marketplace' in ps1
-    assert 'sourcing-agent-1688@sourcing-agent-1688-marketplace' in sh
-    assert "enabled = true" in ps1
-    assert "enabled = true" in sh
-
-
 def test_distribution_docs_explain_url_and_local_marketplace_modes():
     doc = (ROOT / "docs" / "PLUGIN_DISTRIBUTION.md").read_text(encoding="utf-8")
 
-    assert ".mcp.codex.json" in doc
-    assert "Claude" in doc
+    assert "codex desktop" in doc.lower()
     assert 'path: "./plugins/sourcing-agent-1688"' in doc
-    assert "direct MCP" in doc
-    assert 'sourcing-agent-1688@sourcing-agent-1688-marketplace' in doc
     assert "uv run pytest -q -ra" in doc

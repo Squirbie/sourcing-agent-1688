@@ -297,7 +297,7 @@ class Api1688Provider(Base1688Provider):
 
     def _missing_credentials_response(self, response_type):
         message = "ALI1688_APP_KEY, ALI1688_APP_SECRET, and ALI1688_REFRESH_TOKEN or ALI1688_ACCESS_TOKEN are required for api provider."
-        suggested_action = "Set API credentials or use SOURCING1688_PROVIDER=mock/browser/local_html."
+        suggested_action = "Set API credentials or use SOURCING1688_PROVIDER=browser/local_html."
         return response_type(
             status="missing_credentials",
             message=message,
@@ -321,7 +321,7 @@ class Api1688Provider(Base1688Provider):
             source_type="api",
             live_verified=False,
             fetched_at=datetime.now(timezone.utc),
-            warnings=["Live API request failed or returned an API error; no mock fallback was used."],
+            warnings=["Live API request failed or returned an API error."],
         )
 
     def endpoint_url(self, endpoint_key: str) -> str:

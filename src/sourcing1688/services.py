@@ -21,7 +21,6 @@ from sourcing1688.providers.auto_provider import Auto1688Provider
 from sourcing1688.providers.base import Base1688Provider
 from sourcing1688.providers.browser_provider import Browser1688Provider
 from sourcing1688.providers.local_html_provider import LocalHtml1688Provider
-from sourcing1688.providers.mock_provider import Mock1688Provider
 from sourcing1688.scoring import score_product
 from sourcing1688.storage import SourcingStorage
 from sourcing1688.utils import extract_offer_id, structured_error
@@ -29,9 +28,7 @@ from sourcing1688.utils import extract_offer_id, structured_error
 
 def get_provider(provider_name: str | None = None) -> Base1688Provider:
     settings = get_settings()
-    selected = (provider_name or settings.provider or "mock").lower()
-    if selected == "mock":
-        return Mock1688Provider()
+    selected = (provider_name or settings.provider or "auto").lower()
     if selected == "auto":
         return Auto1688Provider(settings=settings)
     if selected == "api":
@@ -44,7 +41,7 @@ def get_provider(provider_name: str | None = None) -> Base1688Provider:
 
 
 def provider_names() -> list[str]:
-    return ["auto", "mock", "api", "browser", "local_html"]
+    return ["auto", "api", "browser", "local_html"]
 
 
 def get_all_provider_capabilities() -> ProviderCapabilitiesResponse:
@@ -80,8 +77,8 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     "status": "missing_credentials",
                     "ready": False,
                     "missing_env": missing_env,
-                    "suggested_action": "Set API credentials or use provider=browser/local_html/mock.",
-                    "error": structured_error("missing_credentials", message, suggested_action="Set API credentials or use provider=browser/local_html/mock.").model_dump(mode="json"),
+                    "suggested_action": "Set API credentials, use provider=browser with a logged-in browser profile, or use provider=local_html for saved product pages.",
+                    "error": structured_error("missing_credentials", message, suggested_action="Set API credentials, use provider=browser, or use provider=local_html.").model_dump(mode="json"),
                 }
             )
         else:
@@ -95,8 +92,8 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     "status": "needs_human_login",
                     "ready": False,
                     "missing_env": ["SOURCING1688_BROWSER_PROFILE"],
-                    "suggested_action": "Run `sourcing1688 browser-profile init --path data/browser-profile`, log in manually, set SOURCING1688_BROWSER_PROFILE, then retry.",
-                    "error": structured_error("needs_human_login", message, needs_human_action=True, suggested_action="Configure and log in with a human-managed browser profile.").model_dump(mode="json"),
+                    "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then retry.",
+                    "error": structured_error("needs_human_login", message, needs_human_action=True, suggested_action="Open and log in with a human-managed browser profile.").model_dump(mode="json"),
                 }
             )
         elif not Path(profile).exists():
@@ -106,8 +103,8 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     "status": "needs_human_login",
                     "ready": False,
                     "profile_path": profile,
-                    "suggested_action": "Create the profile directory and complete login/verification manually.",
-                    "error": structured_error("needs_human_login", message, needs_human_action=True, suggested_action="Create the profile directory and complete login/verification manually.").model_dump(mode="json"),
+                    "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then retry.",
+                    "error": structured_error("needs_human_login", message, needs_human_action=True, suggested_action="Open and log in with a human-managed browser profile.").model_dump(mode="json"),
                 }
             )
         else:
@@ -124,28 +121,29 @@ def check_provider(provider_name: str) -> dict[str, Any]:
         missing_env = _missing_api_env(settings)
         if not missing_env:
             payload.update({"status": "live_not_verified", "ready": True, "selected_provider": "api", "suggested_action": "Run an opt-in live smoke test before treating API results as verified."})
-        elif settings.browser_profile and Path(settings.browser_profile).exists():
-            profile_exists = True
+        elif settings.browser_profile:
+            profile_exists = Path(settings.browser_profile).exists()
+            status = "live_not_verified" if profile_exists else "needs_human_login"
             payload.update(
                 {
-                    "status": "live_not_verified",
+                    "status": status,
                     "ready": False,
                     "selected_provider": "browser",
                     "profile_path": settings.browser_profile,
-                    "suggested_action": "Complete manual browser login/verification and run an opt-in live smoke test.",
-                    "error": structured_error("live_not_verified" if profile_exists else "needs_human_login", "Auto selected browser, but live readiness is not verified.", needs_human_action=True).model_dump(mode="json"),
+                    "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then retry." if not profile_exists else "Run `sourcing1688 browser-profile check --live --json` or a small live search to verify the login state.",
+                    "error": structured_error(status, "Auto selected browser. A browser login profile is required before live search.", needs_human_action=True).model_dump(mode="json"),
                 }
             )
         else:
-            message = "No API credentials or browser profile are configured; auto will not use mock data."
+            message = "No API credentials are configured, and browser profile setup is required."
             payload.update(
                 {
-                    "status": "provider_unavailable",
+                    "status": "needs_human_login",
                     "ready": False,
-                    "selected_provider": None,
-                    "missing_env": missing_env + ["SOURCING1688_BROWSER_PROFILE"],
-                    "suggested_action": "Set API credentials, configure SOURCING1688_BROWSER_PROFILE, or explicitly choose provider=mock for demo data.",
-                    "error": structured_error("missing_live_provider", message, suggested_action="Set live provider credentials/profile or explicitly choose provider=mock for demo data.").model_dump(mode="json"),
+                    "selected_provider": "browser",
+                    "missing_env": missing_env,
+                    "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then retry.",
+                    "error": structured_error("needs_human_login", message, needs_human_action=True, suggested_action="Open and log in with a human-managed browser profile.").model_dump(mode="json"),
                 }
             )
     return payload
@@ -187,6 +185,7 @@ async def search_sourcing_products(
     keywords = expansion.keywords if expansion and expansion.keywords else [keyword]
     all_items: list[ProductSearchResult] = []
     first_blocked: SearchResponse | None = None
+    first_empty_partial: SearchResponse | None = None
     for source_keyword in keywords:
         response = await provider.search_products(
             source_keyword,
@@ -198,11 +197,18 @@ async def search_sourcing_products(
         if response.status not in {"ok", "partial_data"}:
             first_blocked = first_blocked or response
             continue
+        if not response.items:
+            first_empty_partial = first_empty_partial or response
+            continue
         all_items.extend(response.items)
         if len(_dedupe_results(all_items)) >= top:
             break
     if not all_items and first_blocked:
+        first_blocked.keyword = keyword
         return first_blocked
+    if not all_items and first_empty_partial:
+        first_empty_partial.keyword = keyword
+        return first_empty_partial
     return SearchResponse(status="ok", items=_dedupe_results(all_items)[:top], keyword=keyword, **_provider_metadata(provider))
 
 
