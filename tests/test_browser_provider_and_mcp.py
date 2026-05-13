@@ -52,8 +52,8 @@ def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch):
     monkeypatch.setattr(mcp_server.subprocess, "Popen", MockPopen)
     monkeypatch.setattr(mcp_server.sys, "platform", "win32")
 
-    payload = mcp_server.open_chrome_devtools_setup(open_1688=True)
+    payload = mcp_server.open_chrome_devtools_setup()
 
     assert payload["status"] == "ok"
     assert any("chrome://inspect/#remote-debugging" in call for call in calls)
-    assert any("https://www.1688.com" in call for call in calls)
+    assert not any("https://www.1688.com" in call for call in calls)

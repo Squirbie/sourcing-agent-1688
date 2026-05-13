@@ -1,6 +1,6 @@
 [project]
 name = "sourcing1688"
-version = "0.5.10"
+version = "0.5.11"
 description = "1688 Sourcing Agent tools for Korean sellers"
 readme = "README.md"
 requires-python = ">=3.11"

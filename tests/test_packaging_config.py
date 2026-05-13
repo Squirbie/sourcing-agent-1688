@@ -10,7 +10,7 @@ def test_root_codex_plugin_manifest_points_to_root_mcp_json():
     mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
 
     assert plugin["name"] == "sourcing-agent-1688"
-    assert plugin["version"] == "0.5.10"
+    assert plugin["version"] == "0.5.11"
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert "mcpServers" in mcp
@@ -36,7 +36,7 @@ def test_codex_marketplace_points_to_bundled_plugin_layout():
     assert entry["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert entry["policy"]["authentication"] == "ON_INSTALL"
     assert plugin["name"] == "sourcing-agent-1688"
-    assert plugin["version"] == "0.5.10"
+    assert plugin["version"] == "0.5.11"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert plugin["skills"] == "./skills/"
     assert "mcpServers" in mcp
