@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from sourcing1688.browser_profile import open_browser_profile
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
-from sourcing1688.parsers.rendered_html import parse_rendered_html_file
+from sourcing1688.parsers.rendered_html import parse_rendered_html, parse_rendered_html_file
 from sourcing1688.services import (
     analyze_product_url,
     check_provider,
@@ -110,6 +110,17 @@ def parse_1688_rendered_html(html_path: str) -> dict[str, Any]:
     """Parse a local rendered/SingleFile 1688 detail HTML file. Returns ok or partial_data with ProductDetail JSON."""
     try:
         return jsonable(parse_rendered_html_file(html_path))
+    except Exception as exc:  # noqa: BLE001
+        return error_payload("parse_html_failed", str(exc))
+
+
+@mcp.tool()
+def parse_1688_rendered_html_content(html: str, source_url: str | None = None) -> dict[str, Any]:
+    """Parse rendered 1688 detail HTML content captured by a host browser tool."""
+    if not html.strip():
+        return error_payload("parse_html_failed", "HTML content is empty.")
+    try:
+        return jsonable(parse_rendered_html(html, source_url=source_url))
     except Exception as exc:  # noqa: BLE001
         return error_payload("parse_html_failed", str(exc))
 

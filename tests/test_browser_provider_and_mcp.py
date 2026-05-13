@@ -30,6 +30,7 @@ def test_mcp_server_registers_expected_tools():
     tool_names = {tool.name for tool in mcp._tool_manager.list_tools()}
 
     assert "parse_1688_rendered_html" in tool_names
+    assert "parse_1688_rendered_html_content" in tool_names
     assert "image_search_1688_products" in tool_names
     assert "check_1688_provider_capabilities" in tool_names
     assert "check_1688_browser_profile" in tool_names

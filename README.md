@@ -52,6 +52,8 @@ sourcing1688 auth exchange --code CODE --redirect-uri "https://example.com/callb
 
 API가 없으면 브라우저 방식으로 쓸 수 있습니다. 1688은 headless 브라우저에서 로그인 상태가 다르게 보일 수 있어서 기본값은 눈에 보이는 브라우저입니다.
 
+Codex에서 Chrome 플러그인이 현재 탭 HTML을 가져올 수 있는 환경이라면, 이미 로그인된 Chrome으로 페이지를 열고 그 HTML을 `parse_1688_rendered_html_content` MCP 도구에 넘기는 방식이 가장 자연스럽습니다. Python MCP 서버 자체는 다른 플러그인의 Chrome 세션을 직접 제어하지 않으므로, 이 연결은 Codex 호스트가 Chrome 플러그인과 1688 Sourcing Agent를 함께 사용해 처리합니다.
+
 ```powershell
 sourcing1688 browser-profile open --json
 sourcing1688 provider-check --provider browser --json

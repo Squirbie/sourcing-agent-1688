@@ -36,7 +36,12 @@ def _rate(value) -> float | None:
     return parsed / 100 if parsed > 1 else parsed
 
 
-def _extract_offer_id(html: str, path: Path | None) -> str | None:
+def _extract_offer_id(html: str, path: Path | None, source_url: str | None = None) -> str | None:
+    if source_url:
+        try:
+            return extract_offer_id(source_url)
+        except ValueError:
+            pass
     for pattern in [
         r"detail\.1688\.com/offer/(\d+)\.html",
         r'"offerId"\s*:\s*"?(\d+)"?',
@@ -93,11 +98,11 @@ def _extract_sku_options(embedded: dict) -> list[SkuOption]:
     return options
 
 
-def parse_rendered_html(html: str, *, source_path: str | Path | None = None) -> DetailResponse:
+def parse_rendered_html(html: str, *, source_path: str | Path | None = None, source_url: str | None = None) -> DetailResponse:
     path = Path(source_path) if source_path else None
     soup = BeautifulSoup(html, "html.parser")
     embedded = merge_candidates(extract_embedded_json_candidates(soup, html))
-    offer_id = str(embedded.get("offerId") or embedded.get("offer_id") or _extract_offer_id(html, path) or "")
+    offer_id = str(embedded.get("offerId") or embedded.get("offer_id") or _extract_offer_id(html, path, source_url) or "")
     if not offer_id:
         message = "Could not extract 1688 offer_id from rendered HTML."
         return DetailResponse(status="partial_data", message=message, error=structured_error("invalid_offer_id", message), provider="local_html", provider_version=PARSER_VERSION, source_type="local_html", live_verified=False)
@@ -106,7 +111,7 @@ def parse_rendered_html(html: str, *, source_path: str | Path | None = None) -> 
     seller_raw = embedded.get("seller") if isinstance(embedded.get("seller"), dict) else {}
     detail = ProductDetail(
         offer_id=offer_id,
-        url=f"https://detail.1688.com/offer/{offer_id}.html",
+        url=source_url or f"https://detail.1688.com/offer/{offer_id}.html",
         title_zh=str(title),
         title_ko_optional=embedded.get("subjectTrans") or embedded.get("titleTrans"),
         price_tiers=_extract_price_tiers(embedded),
@@ -121,7 +126,7 @@ def parse_rendered_html(html: str, *, source_path: str | Path | None = None) -> 
         detail_image_urls=assets["detail_images"],
         option_image_urls=assets["option_images"],
         video_urls=assets["videos"],
-        raw_source_summary={"provider": "local_html", "parser_version": PARSER_VERSION, "source_path": str(path) if path else None},
+        raw_source_summary={"provider": "local_html", "parser_version": PARSER_VERSION, "source_path": str(path) if path else None, "source_url": source_url},
         provider="local_html",
         provider_version=PARSER_VERSION,
         live_verified=True,

@@ -15,7 +15,7 @@ Use `auto` by default.
 - `browser`: use when the user needs to work through a logged-in browser profile.
 - `local_html`: use when the user provides a saved 1688 detail HTML file.
 
-If the host Chrome plugin is available, prefer the user's existing Chrome session for live browsing. If the MCP returns `needs_human_login` or `blocked_by_verification`, tell the user to complete that step in the browser and retry.
+The MCP browser provider cannot directly control the user's already-open Chrome session. If a host Chrome plugin can capture the current page HTML, use that Chrome session first, then call `parse_1688_rendered_html_content` with the captured HTML and source URL. Use the MCP browser provider only when Chrome capture is unavailable or the user explicitly wants the managed browser profile.
 
 Avoid repeated live browser calls for the same URL. For a product URL, call `analyze_1688_product_url` first and reuse that result unless the user explicitly asks to download assets.
 
@@ -35,4 +35,4 @@ For a 1688 detail URL, call `analyze_1688_product_url` or `get_1688_product_deta
 
 ## Local HTML
 
-For a saved HTML file, call `parse_1688_rendered_html`. For asset saving from that HTML, use `download_1688_product_assets` or the CLI helper if needed.
+For a saved HTML file, call `parse_1688_rendered_html`. For HTML captured from Chrome, call `parse_1688_rendered_html_content`. For asset saving from parsed detail data, use `download_1688_product_assets` or the CLI helper if needed.
