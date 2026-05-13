@@ -145,6 +145,10 @@ def test_browser_profile_open_command_can_be_mocked(monkeypatch, tmp_path):
 def test_distribution_files_are_root_codex_desktop_plugin_only():
     mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
     plugin = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    marketplace = json.loads((ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+    bundle_root = ROOT / "plugins" / "sourcing-agent-1688"
+    bundled_plugin = json.loads((bundle_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    bundled_mcp = json.loads((bundle_root / ".mcp.json").read_text(encoding="utf-8"))
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
     skill = (ROOT / "skills" / "sourcing-agent-1688" / "SKILL.md").read_text(encoding="utf-8").lower()
@@ -155,10 +159,17 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert "mcp_servers" not in mcp
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
-    assert plugin["version"] == "0.5.0"
+    assert plugin["version"] == "0.5.1"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
+    assert marketplace["plugins"][0]["source"] == {"source": "local", "path": "./plugins/sourcing-agent-1688"}
+    assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
+    assert bundled_plugin["name"] == "sourcing-agent-1688"
+    assert bundled_plugin["version"] == "0.5.1"
+    assert bundled_plugin["mcpServers"] == "./.mcp.json"
+    assert "mcpServers" in bundled_mcp
+    assert "mcp_servers" not in bundled_mcp
     assert "sourcing1688-mcp" in pyproject
     assert "sourcing-agent-1688" in pyproject
     assert "암막우산" in readme
@@ -169,9 +180,7 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert "sourcing-agent-1688" in skill
 
 
-def test_removed_cross_platform_marketplace_and_demo_files_are_absent():
-    assert not (ROOT / ".agents").exists()
-    assert not (ROOT / "plugins").exists()
+def test_removed_cross_platform_and_demo_files_are_absent():
     assert not (ROOT / "docs").exists()
     assert not (ROOT / "scripts").exists()
     assert not (ROOT / ".claude-plugin").exists()
