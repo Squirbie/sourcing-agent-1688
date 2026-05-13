@@ -14,19 +14,20 @@ def parse_json_output(result):
 
 
 def test_cli_expand_keywords_json():
-    result = runner.invoke(app, ["expand-keywords", "암막우산", "--json"])
+    keyword = "\uc554\ub9c9\uc6b0\uc0b0"
+    result = runner.invoke(app, ["expand-keywords", keyword, "--json"])
     payload = parse_json_output(result)
 
     assert payload["status"] == "ok"
-    assert "黑胶伞" in payload["keywords"]
+    assert "\u9ed1\u80f6\u4f1e" in payload["keywords"]
     assert "\\u9ed1" not in result.output
-    assert "암막우산" in result.output
+    assert keyword in result.output
 
 
 def test_cli_search_json_with_auto_provider_does_not_launch_browser(monkeypatch, tmp_path):
     monkeypatch.setenv("SOURCING1688_PROVIDER", "auto")
     monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path / "missing-home"))
-    result = runner.invoke(app, ["search", "암막우산", "--top", "1", "--json"])
+    result = runner.invoke(app, ["search", "\uc554\ub9c9\uc6b0\uc0b0", "--top", "1", "--json"])
     payload = parse_json_output(result)
 
     assert payload["status"] == "provider_unavailable"
@@ -44,7 +45,7 @@ def test_cli_failure_is_valid_json():
 
 
 def test_cli_unknown_provider_json_failure_is_valid_json():
-    result = runner.invoke(app, ["search", "암막우산", "--provider", "nope", "--json"])
+    result = runner.invoke(app, ["search", "\uc554\ub9c9\uc6b0\uc0b0", "--provider", "nope", "--json"])
     payload = json.loads(result.output)
 
     assert result.exit_code != 0

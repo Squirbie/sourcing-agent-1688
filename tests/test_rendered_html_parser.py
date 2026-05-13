@@ -114,3 +114,26 @@ def test_rendered_html_parser_extracts_1688_model_trade_and_seller_fields():
     assert detail.sku_options[0].name == "颜色"
     assert detail.sku_options[0].values == ["粉色小号"]
     assert detail.option_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN-option.jpg"]
+
+
+def test_rendered_html_parser_warns_when_video_metadata_is_hidden():
+    html = """
+    <html>
+      <body>
+        <script>
+        window.__DATA__ = {
+          "offerModel": {"offerId": 775988776405, "subject": "宠物用品", "leafCategoryName": "宠物牵引绳"},
+          "tradeModel": {"beginAmount": 1, "canBookedAmount": 10, "priceDisplay": "11.50", "saleCount": 1728},
+          "sellerModel": {"companyName": "测试卖家"},
+          "wirelessVideo": {"videoId": 0, "videoUrl": ""}
+        };
+        </script>
+      </body>
+    </html>
+    """
+
+    result = parse_rendered_html(html)
+
+    assert result.item.video_urls == []
+    assert result.warnings
+    assert "no downloadable video url" in result.warnings[0].lower()

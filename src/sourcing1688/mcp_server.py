@@ -9,7 +9,8 @@ from mcp.server.fastmcp import FastMCP
 from sourcing1688.browser_profile import open_browser_profile
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
-from sourcing1688.parsers.rendered_html import parse_rendered_html, parse_rendered_html_file
+from sourcing1688.assets.downloader import download_assets as download_parsed_assets
+from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_rendered_html, parse_rendered_html_file
 from sourcing1688.services import (
     analyze_product_url,
     check_provider,
@@ -126,6 +127,53 @@ def parse_1688_rendered_html_content(html: str, source_url: str | None = None) -
 
 
 @mcp.tool()
+async def download_1688_product_assets_from_html_content(
+    html: str,
+    source_url: str | None = None,
+    output_dir: str | None = None,
+    include: str | list[str] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Parse rendered 1688 HTML content captured by Chrome and save/download its assets."""
+    if not html.strip():
+        return error_payload("parse_html_failed", "HTML content is empty.")
+    try:
+        parsed = parse_rendered_html(html, source_url=source_url)
+        if parsed.item is None:
+            return parsed.model_dump(mode="json")
+        out = output_dir or str(get_settings().output_dir)
+        manifest = await download_parsed_assets(
+            parsed.item,
+            out,
+            include=include,
+            html=html,
+            source_url=source_url or parsed.item.url,
+            parser_version=PARSER_VERSION,
+            dry_run=dry_run,
+        )
+        payload = {
+            "status": manifest.status,
+            "provider": "local_html",
+            "provider_version": PARSER_VERSION,
+            "source_type": "local_html",
+            "live_verified": True,
+            "manifest_path": str(Path(manifest.saved_dir) / "manifest.json"),
+            "counts": manifest.counts,
+            "warnings": parsed.warnings,
+            "manifest": {
+                "offer_id": manifest.offer_id,
+                "saved_dir": manifest.saved_dir,
+                "manifest_path": str(Path(manifest.saved_dir) / "manifest.json"),
+                "status": manifest.status,
+                "failed_assets": [item.model_dump(mode="json") for item in manifest.failed_assets],
+            },
+        }
+        return jsonable(payload)
+    except Exception as exc:  # noqa: BLE001
+        return error_payload("asset_download_failed", str(exc), status="partial_success")
+
+
+@mcp.tool()
 async def image_search_1688_products(
     image_url: str | None = None,
     image_path: str | None = None,
@@ -149,6 +197,12 @@ def check_1688_provider_capabilities(provider: str | None = None) -> dict[str, A
         return {"status": "ok", "providers": {key: value.model_dump(mode="json") for key, value in response.providers.items()}}
     except Exception as exc:  # noqa: BLE001
         return error_payload("provider_check_failed", str(exc))
+
+
+@mcp.tool()
+def provider_check_1688(provider: str | None = None) -> dict[str, Any]:
+    """Alias for check_1688_provider_capabilities; useful when tools are searched by provider-check wording."""
+    return check_1688_provider_capabilities(provider)
 
 
 @mcp.tool()

@@ -21,18 +21,26 @@ Avoid repeated live browser calls for the same URL. For a product URL without AP
 
 ## Search Workflow
 
-1. Call `check_1688_provider_capabilities`.
+1. Call `provider_check_1688` or `check_1688_provider_capabilities`.
 2. Expand Korean keywords with `expand_sourcing_keywords`.
-3. Search with `search_1688_products`.
-4. Score with `recommend_1688_products`.
-5. Show title, URL, image URL, price, MOQ, sales/trade volume, repurchase rate, seller score, risks, missing fields, provider, and `live_verified`.
+3. If `auto` is `provider_unavailable`, do not retry with `browser` unless the user explicitly asks for the managed browser. Ask for API credentials, a saved 1688 HTML file, or Chrome-captured HTML.
+4. Search with `search_1688_products` only when API access is ready.
+5. Score with `recommend_1688_products`.
+6. Show title, URL, image URL, price, MOQ, sales/trade volume, repurchase rate, seller score, risks, missing fields, provider, and `live_verified`.
 
 Do not describe `live_verified=false` results as verified live data.
 
 ## URL Analysis
 
-For a 1688 detail URL, call `analyze_1688_product_url` or `get_1688_product_detail`. If the user asks to save page assets, call `download_1688_product_assets` and return `saved_dir`, `manifest_path`, counts, and failures.
+For a 1688 detail URL:
+
+- If API credentials are ready, call `analyze_1688_product_url`.
+- If API credentials are missing and Chrome can capture the rendered page HTML, open/use the user's Chrome page, then call `parse_1688_rendered_html_content`.
+- If the user asks to save page assets from captured HTML, call `download_1688_product_assets_from_html_content`.
+- If only a saved HTML file is available, call `parse_1688_rendered_html` or use `download_1688_product_assets` with `provider=local_html` and the HTML path.
+
+When video metadata exists but no video URL is exposed, report that the public HTML did not expose the video URL and that a logged-in rendered page or captured network response may be needed.
 
 ## Local HTML
 
-For a saved HTML file, call `parse_1688_rendered_html`. For HTML captured from Chrome, call `parse_1688_rendered_html_content`. For asset saving from parsed detail data, use `download_1688_product_assets` or the CLI helper if needed.
+For a saved HTML file, call `parse_1688_rendered_html`. For HTML captured from Chrome, call `parse_1688_rendered_html_content`. For asset saving from captured HTML, call `download_1688_product_assets_from_html_content`.

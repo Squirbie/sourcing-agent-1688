@@ -199,6 +199,9 @@ def parse_rendered_html(html: str, *, source_path: str | Path | None = None, sou
     title = embedded.get("subject") or embedded.get("title") or (soup.find("h1").get_text(" ", strip=True) if soup.find("h1") else None) or (soup.title.string.strip() if soup.title and soup.title.string else None) or f"1688 offer {offer_id}"
     assets = extract_assets(soup, html)
     option_images = dedupe_urls(assets["option_images"] + _extract_option_images(embedded))
+    warnings = []
+    if not assets["videos"] and re.search(r"(videoId|videoUrl|wirelessVideo|rox-wap-detail-video)", html):
+        warnings.append("Video metadata was present, but no downloadable video URL was exposed in this HTML. A logged-in rendered page or captured network response may be needed.")
     detail = ProductDetail(
         offer_id=offer_id,
         url=source_url or f"https://detail.1688.com/offer/{offer_id}.html",
@@ -224,6 +227,7 @@ def parse_rendered_html(html: str, *, source_path: str | Path | None = None, sou
         source_type="local_html",
         fetched_at=datetime.now(timezone.utc),
         raw_reference_path=str(path) if path else None,
+        warnings=warnings,
     )
     missing = []
     for field in ["price_tiers", "main_image_urls", "detail_image_urls", "attributes", "seller", "category", "stock"]:
@@ -231,7 +235,7 @@ def parse_rendered_html(html: str, *, source_path: str | Path | None = None, sou
         if not value:
             missing.append(field)
     detail.missing_fields = missing
-    return DetailResponse(status="ok" if not missing else "partial_data", item=detail, provider="local_html", provider_version=PARSER_VERSION, source_type="local_html", live_verified=True, fetched_at=datetime.now(timezone.utc), missing_fields=missing, raw_reference_path=str(path) if path else None)
+    return DetailResponse(status="ok" if not missing else "partial_data", item=detail, provider="local_html", provider_version=PARSER_VERSION, source_type="local_html", live_verified=True, fetched_at=datetime.now(timezone.utc), missing_fields=missing, raw_reference_path=str(path) if path else None, warnings=warnings)
 
 
 def parse_rendered_html_file(path: str | Path) -> DetailResponse:

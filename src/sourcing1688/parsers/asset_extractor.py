@@ -7,7 +7,9 @@ from bs4 import BeautifulSoup
 
 
 IMAGE_HOST_MARKERS = ("alicdn.com", "aliimg.com")
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".svg")
 VIDEO_EXTENSIONS = (".mp4", ".m3u8", ".mov")
+NON_ASSET_EXTENSIONS = (".js", ".css", ".ttf", ".woff", ".woff2", ".html", ".htm", ".json", ".ico")
 PLACEHOLDER_MARKERS = ("lazyload", "placeholder", "loading.gif", "blank.gif", "transparent")
 
 
@@ -50,6 +52,18 @@ def dedupe_urls(urls: list[str]) -> list[str]:
     return deduped
 
 
+def _looks_like_image_url(url: str) -> bool:
+    lowered = url.lower()
+    path = urlparse(lowered).path
+    if path.endswith(NON_ASSET_EXTENSIONS):
+        return False
+    if path.endswith(IMAGE_EXTENSIONS):
+        return True
+    if any(host in lowered for host in IMAGE_HOST_MARKERS):
+        return any(marker in path for marker in ["/img/", "/ibank/", "/imgextra/", "/cms/upload/"])
+    return False
+
+
 def extract_urls_from_text(text: str) -> tuple[list[str], list[str]]:
     candidates = re.findall(r"(?:https?:)?//[^'\"\s<>\\]+", text)
     images: list[str] = []
@@ -64,7 +78,7 @@ def extract_urls_from_text(text: str) -> tuple[list[str], list[str]]:
             continue
         if any(lowered.split("?")[0].endswith(ext) for ext in VIDEO_EXTENSIONS) or "video" in parsed.netloc:
             videos.append(normalized)
-        elif any(host in lowered for host in IMAGE_HOST_MARKERS) or re.search(r"\.(jpe?g|png|webp|gif)(?:\?|$)", lowered):
+        elif _looks_like_image_url(normalized) or re.search(r"\.(jpe?g|png|webp|gif|svg)(?:\?|$)", lowered):
             images.append(normalized)
     return dedupe_urls(images), dedupe_urls(videos)
 

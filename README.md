@@ -1,80 +1,94 @@
 # 1688 Sourcing Agent
 
-Codex Desktop에서 `@sourcing-agent-1688`로 호출해서 1688 상품을 찾고, 링크를 분석하고, 상세페이지 자료를 저장하는 플러그인입니다.
+Codex Desktop에서 `@sourcing-agent-1688`로 호출해서 1688 상품을 찾고, 상품 페이지를 분석하고, 이미지/상세 HTML/속성 JSON을 저장하는 플러그인입니다.
 
 ## 이렇게 말하면 됩니다
 
 ```text
-@sourcing-agent-1688 1688에서 암막우산 찾아줘.
+@sourcing-agent-1688 1688에서 요즘 인기있는 상품 찾아줘.
 ```
 
 ```text
-@sourcing-agent-1688 이 1688 상품 링크 분석해줘:
+@sourcing-agent-1688 이 1688 상품 분석해줘:
 https://detail.1688.com/offer/123456789.html
 ```
 
 ```text
-@sourcing-agent-1688 이 상품페이지 이미지, 영상, HTML, 속성 JSON 저장해줘.
-```
-
-```text
-@sourcing-agent-1688 잘 팔릴 만한 후보를 추천하고 shortlist에 저장해줘.
+@sourcing-agent-1688 이 상품페이지 이미지, 상세 HTML, 속성 JSON 저장해줘.
 ```
 
 ## 설치
 
-Codex Desktop의 플러그인 추가 화면에서 아래 GitHub repo를 추가합니다.
+Codex Desktop 플러그인 화면에서 이 GitHub repo를 추가합니다.
 
 ```text
 https://github.com/Squirbie/sourcing-agent-1688
 ```
 
-설치 후 새 채팅에서 `@sourcing-agent-1688`를 입력하면 플러그인을 호출할 수 있습니다.
+설치 후 새 채팅에서 `@sourcing-agent-1688`를 선택해서 사용합니다.
 
-## 실제 1688 연결
+## Provider
 
-기본 provider는 `auto`입니다. `auto`는 API 키가 있을 때 API를 사용하고, API가 없으면 관리형 브라우저를 자동으로 열지 않습니다. 이미 로그인된 Chrome 페이지를 쓰는 경우에는 Chrome에서 가져온 HTML을 `parse_1688_rendered_html_content`로 넘기는 흐름을 사용합니다.
-
-| provider | 쓰는 상황 | 준비물 |
+| provider | 용도 | 준비물 |
 |---|---|---|
-| `auto` | 기본값 | API 설정. API가 없으면 브라우저를 자동 실행하지 않음 |
-| `api` | 1688 Open Platform API로 검색 | AppKey, AppSecret, access token 또는 refresh token |
-| `browser` | 로그인한 브라우저 세션으로 확인 | 사용자가 직접 로그인한 1688 브라우저 프로필 |
-| `local_html` | 저장해둔 상세페이지 HTML 분석 | 1688 상세페이지 HTML 파일 |
+| `auto` | 기본 진단 및 API 우선 사용 | 1688 API 키가 있으면 API 사용. 키가 없으면 브라우저를 자동으로 열지 않음 |
+| `api` | 1688 Open Platform API 사용 | AppKey, AppSecret, access token 또는 refresh token |
+| `browser` | 관리형 브라우저 프로필 사용 | 사용자가 직접 로그인한 1688 브라우저 프로필 |
+| `local_html` | 저장된 1688 상세 HTML 분석 | HTML 파일 |
 
-API 키와 토큰은 `open.1688.com / 1688开放平台`에서 앱을 만들고 발급받습니다.
+API 키가 없을 때는 `auto`가 Chrome 창을 자동으로 열지 않습니다. 이미 로그인된 Chrome 페이지를 쓰려면 Chrome 플러그인이 현재 탭 HTML을 가져오고, 1688 Sourcing Agent가 그 HTML을 `parse_1688_rendered_html_content`로 분석하는 흐름을 사용합니다.
+
+## 한국어 키워드 확장
+
+한국어 상품명을 1688 검색에 맞는 중국어 후보로 확장합니다.
+
+예:
+
+- 월드컵 축구 유니폼 → `世界杯球衣`, `足球服`, `国家队球衣`, `2026世界杯球衣`, `足球训练服`
+- 운동 양말 → `运动袜`, `跑步袜`, `毛巾底袜`, `中筒运动袜`
+- 남성 벨트 → `男士皮带`, `自动扣皮带`, `腰带`, `商务皮带`
+- 크라프트 포장봉투 → `牛皮纸袋`, `外卖包装袋`, `食品包装袋`, `手提牛皮纸袋`
+- 러닝화 → `跑步鞋`, `运动鞋`, `透气跑鞋`, `休闲运动鞋`
+- 남성 속옷 → `男士内裤`, `平角裤`, `纯棉男内裤`, `男士四角裤`
+
+## Chrome HTML 기반 분석
+
+API가 없거나 1688이 로그인 상태에서만 정보를 보여주는 경우, 이미 로그인된 Chrome에서 상품 페이지를 열고 현재 탭 HTML을 플러그인에 넘기는 방식이 가장 안정적입니다.
+
+사용되는 MCP 도구:
+
+- `parse_1688_rendered_html_content`: Chrome이 가져온 HTML을 상품 상세 JSON으로 분석
+- `download_1688_product_assets_from_html_content`: Chrome이 가져온 HTML에서 이미지/상세 HTML/속성 JSON 저장
+
+영상 버튼이 화면에 보여도 HTML 안에 실제 `mp4`/`m3u8` URL이 없을 수 있습니다. 이 경우 플러그인은 “영상 URL이 공개 HTML에 노출되지 않았다”는 경고를 반환합니다.
+
+## CLI 예시
 
 ```powershell
-sourcing1688 auth status --json
-sourcing1688 auth url --redirect-uri "https://example.com/callback" --json
-sourcing1688 auth exchange --code CODE --redirect-uri "https://example.com/callback" --json
+sourcing1688 provider-check --provider auto --json
+sourcing1688 expand-keywords "월드컵 축구 유니폼" --json
+sourcing1688 parse-html product.html --json
+sourcing1688 download-assets-from-html product.html --dry-run --json
 ```
 
-API가 없으면 브라우저 방식으로 쓸 수 있습니다. 1688은 headless 브라우저에서 로그인 상태가 다르게 보일 수 있어서 기본값은 눈에 보이는 브라우저입니다.
+API 키가 있을 때:
 
-Codex에서 Chrome 플러그인이 현재 탭 HTML을 가져올 수 있는 환경이라면, 이미 로그인된 Chrome으로 페이지를 열고 그 HTML을 `parse_1688_rendered_html_content` MCP 도구에 넘기는 방식이 가장 자연스럽습니다. Python MCP 서버 자체는 다른 플러그인의 Chrome 세션을 직접 제어하지 않으므로, 이 연결은 Codex 호스트가 Chrome 플러그인과 1688 Sourcing Agent를 함께 사용해 처리합니다.
+```powershell
+sourcing1688 analyze-url "https://detail.1688.com/offer/123456789.html" --provider api --json
+```
+
+1688 API 키는 `open.1688.com / 1688开放平台`에서 앱을 만들고 필요한 권한을 받은 뒤 준비합니다.
+
+관리형 브라우저 프로필을 명시적으로 쓸 때:
 
 ```powershell
 sourcing1688 browser-profile open --json
 sourcing1688 provider-check --provider browser --json
 ```
 
-창을 띄우지 않고 시도하려면 `SOURCING1688_BROWSER_HEADLESS=true`를 설정할 수 있지만, 1688이 다시 로그인을 요구할 수 있습니다.
-
-## CLI
-
-```powershell
-sourcing1688 provider-check --provider auto --json
-sourcing1688 provider-check --provider auto --json
-sourcing1688 parse-html product.html --json
-sourcing1688 analyze-url "https://detail.1688.com/offer/123456789.html" --provider api --json
-sourcing1688 parse-html path/to/1688-detail.html --json
-sourcing1688 download-assets-from-html path/to/1688-detail.html --dry-run --json
-```
-
 ## 저장 위치
 
-런타임 데이터는 `SOURCING1688_HOME` 아래에 모입니다.
+기본 runtime 데이터는 `SOURCING1688_HOME` 아래에 저장됩니다.
 
 ```text
 ~/.sourcing1688/
@@ -87,7 +101,7 @@ sourcing1688 download-assets-from-html path/to/1688-detail.html --dry-run --json
 
 ## 삭제
 
-Codex Desktop에서는 플러그인 화면에서 제거합니다. 로컬 데이터까지 지우려면:
+Codex Desktop에서는 플러그인 화면에서 제거합니다. 로컬 runtime 데이터까지 지우려면:
 
 ```powershell
 sourcing1688 uninstall --yes

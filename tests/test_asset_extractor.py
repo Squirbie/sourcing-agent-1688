@@ -38,3 +38,17 @@ def test_extract_assets_does_not_crash_on_malformed_script_url():
 
     assert assets["main_images"] == ["https://cbu01.alicdn.com/img/ibank/O1CN-main.jpg"]
     assert assets["videos"] == ["https://cloud.video.taobao.com/play/u/1/p/1/e/6/t/1/valid.mp4"]
+
+
+def test_extract_urls_ignores_scripts_fonts_and_root_hosts():
+    text = """
+    https://g.alicdn.com/upkg-solution/detail/0.1.14/index.js
+    https://at.alicdn.com/t/a/font.woff2
+    https://cbu01.alicdn.com/
+    https://cbu01.alicdn.com/img/ibank/O1CN-real.jpg
+    """
+
+    images, videos = extract_urls_from_text(text)
+
+    assert images == ["https://cbu01.alicdn.com/img/ibank/O1CN-real.jpg"]
+    assert videos == []
