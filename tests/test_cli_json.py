@@ -23,14 +23,14 @@ def test_cli_expand_keywords_json():
     assert "암막우산" in result.output
 
 
-def test_cli_search_json_with_auto_provider_needs_browser_login(monkeypatch, tmp_path):
+def test_cli_search_json_with_auto_provider_does_not_launch_browser(monkeypatch, tmp_path):
     monkeypatch.setenv("SOURCING1688_PROVIDER", "auto")
     monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path / "missing-home"))
     result = runner.invoke(app, ["search", "암막우산", "--top", "1", "--json"])
     payload = parse_json_output(result)
 
-    assert payload["status"] == "needs_human_login"
-    assert payload["error"]["code"] == "needs_human_login"
+    assert payload["status"] == "provider_unavailable"
+    assert payload["error"]["code"] == "missing_live_provider"
     assert payload["items"] == []
 
 

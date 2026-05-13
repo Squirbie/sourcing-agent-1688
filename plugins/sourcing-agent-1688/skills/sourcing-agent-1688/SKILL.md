@@ -9,15 +9,15 @@ Use this plugin for 1688 product sourcing inside Codex Desktop.
 
 ## Provider
 
-Use `auto` by default.
+Use `auto` only for API-backed live access. If API credentials are missing, do not call tools that would open the managed browser automatically.
 
 - `api`: use when 1688 Open Platform credentials are configured.
 - `browser`: use when the user needs to work through a logged-in browser profile.
 - `local_html`: use when the user provides a saved 1688 detail HTML file.
 
-The MCP browser provider cannot directly control the user's already-open Chrome session. If a host Chrome plugin can capture the current page HTML, use that Chrome session first, then call `parse_1688_rendered_html_content` with the captured HTML and source URL. Use the MCP browser provider only when Chrome capture is unavailable or the user explicitly wants the managed browser profile.
+The MCP browser provider cannot directly control the user's already-open Chrome session. If a host Chrome plugin can capture the current page HTML, use that Chrome session first, then call `parse_1688_rendered_html_content` with the captured HTML and source URL. Use the MCP browser provider only when the user explicitly asks for the managed browser profile.
 
-Avoid repeated live browser calls for the same URL. For a product URL, call `analyze_1688_product_url` first and reuse that result unless the user explicitly asks to download assets.
+Avoid repeated live browser calls for the same URL. For a product URL without API credentials, prefer Chrome-captured HTML over `analyze_1688_product_url`.
 
 ## Search Workflow
 

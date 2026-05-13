@@ -121,29 +121,20 @@ def check_provider(provider_name: str) -> dict[str, Any]:
         missing_env = _missing_api_env(settings)
         if not missing_env:
             payload.update({"status": "live_not_verified", "ready": True, "selected_provider": "api", "suggested_action": "Run an opt-in live smoke test before treating API results as verified."})
-        elif settings.browser_profile:
-            profile_exists = Path(settings.browser_profile).exists()
-            status = "live_not_verified" if profile_exists else "needs_human_login"
-            payload.update(
-                {
-                    "status": status,
-                    "ready": False,
-                    "selected_provider": "browser",
-                    "profile_path": settings.browser_profile,
-                    "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then retry." if not profile_exists else "Run `sourcing1688 browser-profile check --live --json` or a small live search to verify the login state.",
-                    "error": structured_error(status, "Auto selected browser. A browser login profile is required before live search.", needs_human_action=True).model_dump(mode="json"),
-                }
-            )
         else:
-            message = "No API credentials are configured, and browser profile setup is required."
+            message = "No API credentials are configured, and auto will not launch a managed browser."
             payload.update(
                 {
-                    "status": "needs_human_login",
+                    "status": "provider_unavailable",
                     "ready": False,
-                    "selected_provider": "browser",
+                    "selected_provider": None,
                     "missing_env": missing_env,
-                    "suggested_action": "Run `sourcing1688 browser-profile open --json`, log in to 1688 manually, close the browser, then retry.",
-                    "error": structured_error("needs_human_login", message, needs_human_action=True, suggested_action="Open and log in with a human-managed browser profile.").model_dump(mode="json"),
+                    "suggested_action": "Set 1688 API credentials, pass already-open Chrome HTML to parse_1688_rendered_html_content, or explicitly choose provider=browser.",
+                    "error": structured_error(
+                        "missing_live_provider",
+                        message,
+                        suggested_action="Use API credentials, Chrome-captured HTML, or explicit provider=browser.",
+                    ).model_dump(mode="json"),
                 }
             )
     return payload

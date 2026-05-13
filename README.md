@@ -33,11 +33,11 @@ https://github.com/Squirbie/sourcing-agent-1688
 
 ## 실제 1688 연결
 
-기본 provider는 `auto`입니다.
+기본 provider는 `auto`입니다. `auto`는 API 키가 있을 때 API를 사용하고, API가 없으면 관리형 브라우저를 자동으로 열지 않습니다. 이미 로그인된 Chrome 페이지를 쓰는 경우에는 Chrome에서 가져온 HTML을 `parse_1688_rendered_html_content`로 넘기는 흐름을 사용합니다.
 
 | provider | 쓰는 상황 | 준비물 |
 |---|---|---|
-| `auto` | 기본값 | API 설정 또는 브라우저 설정 |
+| `auto` | 기본값 | API 설정. API가 없으면 브라우저를 자동 실행하지 않음 |
 | `api` | 1688 Open Platform API로 검색 | AppKey, AppSecret, access token 또는 refresh token |
 | `browser` | 로그인한 브라우저 세션으로 확인 | 사용자가 직접 로그인한 1688 브라우저 프로필 |
 | `local_html` | 저장해둔 상세페이지 HTML 분석 | 1688 상세페이지 HTML 파일 |
@@ -65,9 +65,9 @@ sourcing1688 provider-check --provider browser --json
 
 ```powershell
 sourcing1688 provider-check --provider auto --json
-sourcing1688 search "암막우산" --top 5 --provider auto --json
-sourcing1688 recommend "암막우산" --top 5 --provider auto --json
-sourcing1688 analyze-url "https://detail.1688.com/offer/123456789.html" --provider auto --json
+sourcing1688 provider-check --provider auto --json
+sourcing1688 parse-html product.html --json
+sourcing1688 analyze-url "https://detail.1688.com/offer/123456789.html" --provider api --json
 sourcing1688 parse-html path/to/1688-detail.html --json
 sourcing1688 download-assets-from-html path/to/1688-detail.html --dry-run --json
 ```

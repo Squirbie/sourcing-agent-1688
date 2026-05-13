@@ -16,7 +16,6 @@ from sourcing1688.models import (
 from sourcing1688.providers.api_auth import ApiAuthManager
 from sourcing1688.providers.api_provider import Api1688Provider
 from sourcing1688.providers.base import Base1688Provider
-from sourcing1688.providers.browser_provider import Browser1688Provider
 from sourcing1688.utils import structured_error
 
 
@@ -24,7 +23,7 @@ PROVIDER_VERSION = "0.2.0"
 
 
 class Auto1688Provider(Base1688Provider):
-    """Resolve to API when available, otherwise browser."""
+    """Resolve to API when available; never launch a managed browser implicitly."""
 
     name = "auto"
     provider_version = PROVIDER_VERSION
@@ -45,18 +44,21 @@ class Auto1688Provider(Base1688Provider):
             hot_keywords=True,
             rankings=True,
             image_search=True,
-            required_env=["ALI1688 credentials or a human-managed browser profile"],
-            notes=["Chooses api when API credentials exist. Otherwise it uses the browser provider and asks the user to create/login a browser profile when needed."],
+            required_env=["ALI1688 credentials"],
+            notes=[
+                "Chooses api when API credentials exist.",
+                "Does not launch the managed browser provider implicitly. Use Chrome-captured HTML or provider=browser explicitly.",
+            ],
         )
 
     def resolve(self) -> Base1688Provider | None:
         if ApiAuthManager(self.settings).has_any_credentials():
             return Api1688Provider(settings=self.settings)
-        return Browser1688Provider(settings=self.settings)
+        return None
 
     def _missing_live_provider(self, response_type):
-        message = "No live 1688 provider is configured."
-        suggested_action = "Set ALI1688 credentials or open a human-managed browser profile with `sourcing1688 browser-profile open --json`."
+        message = "No API provider is configured, and auto will not launch a managed browser."
+        suggested_action = "Set ALI1688 credentials, pass already-open Chrome HTML to parse_1688_rendered_html_content, or explicitly choose provider=browser."
         return response_type(
             status="provider_unavailable",
             message=message,
