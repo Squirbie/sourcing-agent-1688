@@ -10,13 +10,17 @@ def test_root_codex_plugin_manifest_points_to_root_mcp_json():
     mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
 
     assert plugin["name"] == "sourcing-agent-1688"
-    assert plugin["version"] == "0.5.7"
+    assert plugin["version"] == "0.5.8"
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert "mcpServers" in mcp
     assert "mcp_servers" not in mcp
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
+    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
 
 
 def test_codex_marketplace_points_to_bundled_plugin_layout():
@@ -31,13 +35,17 @@ def test_codex_marketplace_points_to_bundled_plugin_layout():
     assert entry["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert entry["policy"]["authentication"] == "ON_INSTALL"
     assert plugin["name"] == "sourcing-agent-1688"
-    assert plugin["version"] == "0.5.7"
+    assert plugin["version"] == "0.5.8"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert plugin["skills"] == "./skills/"
     assert "mcpServers" in mcp
     assert "mcp_servers" not in mcp
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
+    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
 
 
 def test_removed_cross_platform_layouts_are_absent():

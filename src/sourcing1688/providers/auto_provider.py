@@ -47,7 +47,7 @@ class Auto1688Provider(Base1688Provider):
             required_env=["ALI1688 credentials"],
             notes=[
                 "Chooses api when API credentials exist.",
-                "Does not launch the managed browser provider implicitly. Use Chrome-captured HTML or provider=browser explicitly.",
+                "Does not launch the managed browser provider implicitly. Use Chrome DevTools page/network capture or provider=browser explicitly.",
             ],
         )
 
@@ -58,7 +58,7 @@ class Auto1688Provider(Base1688Provider):
 
     def _missing_live_provider(self, response_type):
         message = "No API provider is configured, and auto will not launch a managed browser."
-        suggested_action = "Set ALI1688 credentials, pass already-open Chrome HTML to parse_1688_rendered_html_content, or explicitly choose provider=browser."
+        suggested_action = "Set ALI1688 credentials, use Chrome DevTools to capture rendered HTML/network JSON, or explicitly choose provider=browser."
         return response_type(
             status="provider_unavailable",
             message=message,

@@ -63,4 +63,4 @@ def test_auto_provider_routes_missing_credentials_to_chrome_or_explicit_setup(mo
     assert payload["selected_provider"] is None
     assert payload["ready"] is False
     assert payload["error"]["code"] == "missing_live_provider"
-    assert "parse_1688_rendered_html_content" in payload["suggested_action"]
+    assert "Chrome DevTools" in payload["suggested_action"]

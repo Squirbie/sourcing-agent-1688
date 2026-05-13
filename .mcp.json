@@ -11,6 +11,24 @@
         "SOURCING1688_PROVIDER": "auto",
         "SOURCING1688_HOME": "~/.sourcing1688"
       }
+    },
+    "chrome-devtools": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--auto-connect",
+        "--redact-network-headers",
+        "--no-usage-statistics",
+        "--no-performance-crux"
+      ],
+      "env": {
+        "SystemRoot": "C:\\Windows",
+        "PROGRAMFILES": "C:\\Program Files",
+        "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "true"
+      }
     }
   }
 }

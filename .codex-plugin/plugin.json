@@ -1,6 +1,6 @@
 {
   "name": "sourcing-agent-1688",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "1688 product sourcing tools for Codex Desktop",
   "author": {
     "name": "Squirbie",
@@ -16,7 +16,7 @@
   "interface": {
     "displayName": "1688 Sourcing Agent",
     "shortDescription": "Find, analyze, and save 1688 sourcing candidates from Codex Desktop",
-    "longDescription": "Codex Desktop plugin and MCP tools for 1688 product sourcing, listing analysis, asset saving, scoring, and shortlist export.",
+    "longDescription": "Codex Desktop plugin that combines Chrome DevTools page/network access with 1688 sourcing parsers for product research, listing analysis, asset saving, scoring, and shortlist export.",
     "developerName": "Squirbie",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],

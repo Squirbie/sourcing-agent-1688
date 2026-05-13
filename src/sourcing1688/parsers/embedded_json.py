@@ -42,6 +42,10 @@ def _walk_json(value: Any) -> list[dict[str, Any]]:
     return found
 
 
+def walk_json_candidates(value: Any) -> list[dict[str, Any]]:
+    return _walk_json(value)
+
+
 def _balanced_json_slice(text: str, start: int) -> str | None:
     opener = text[start]
     closer = "}" if opener == "{" else "]" if opener == "[" else None

@@ -129,11 +129,11 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     "ready": False,
                     "selected_provider": None,
                     "missing_env": missing_env,
-                    "suggested_action": "Set 1688 API credentials, pass already-open Chrome HTML to parse_1688_rendered_html_content, or explicitly choose provider=browser.",
+                    "suggested_action": "Set 1688 API credentials, use Chrome DevTools to capture rendered HTML/network JSON, or explicitly choose provider=browser.",
                     "error": structured_error(
                         "missing_live_provider",
                         message,
-                        suggested_action="Use API credentials, Chrome-captured HTML, or explicit provider=browser.",
+                        suggested_action="Use API credentials, Chrome DevTools page/network capture, or explicit provider=browser.",
                     ).model_dump(mode="json"),
                 }
             )

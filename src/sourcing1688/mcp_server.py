@@ -10,7 +10,7 @@ from sourcing1688.browser_profile import open_browser_profile
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.assets.downloader import download_assets as download_parsed_assets
-from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_rendered_html, parse_rendered_html_file
+from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_network_payload, parse_rendered_html, parse_rendered_html_file
 from sourcing1688.services import (
     analyze_product_url,
     check_provider,
@@ -124,6 +124,17 @@ def parse_1688_rendered_html_content(html: str, source_url: str | None = None) -
         return jsonable(parse_rendered_html(html, source_url=source_url))
     except Exception as exc:  # noqa: BLE001
         return error_payload("parse_html_failed", str(exc))
+
+
+@mcp.tool()
+def parse_1688_network_payload_content(payload_json: str, source_url: str | None = None) -> dict[str, Any]:
+    """Parse 1688 JSON/network responses captured from Chrome DevTools and return ProductDetail JSON."""
+    if not payload_json.strip():
+        return error_payload("parse_network_payload_failed", "Network payload JSON is empty.")
+    try:
+        return jsonable(parse_network_payload(payload_json, source_url=source_url))
+    except Exception as exc:  # noqa: BLE001
+        return error_payload("parse_network_payload_failed", str(exc))
 
 
 @mcp.tool()

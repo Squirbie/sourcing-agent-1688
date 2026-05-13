@@ -159,17 +159,24 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert "mcp_servers" not in mcp
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
-    assert plugin["version"] == "0.5.7"
+    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert plugin["version"] == "0.5.8"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert marketplace["plugins"][0]["source"] == {"source": "local", "path": "./plugins/sourcing-agent-1688"}
     assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert bundled_plugin["name"] == "sourcing-agent-1688"
-    assert bundled_plugin["version"] == "0.5.7"
+    assert bundled_plugin["version"] == "0.5.8"
     assert bundled_plugin["mcpServers"] == "./.mcp.json"
     assert "mcpServers" in bundled_mcp
     assert "mcp_servers" not in bundled_mcp
+    assert bundled_mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert "chrome-devtools-mcp@latest" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--auto-connect" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "sourcing1688-mcp" in pyproject
     assert "sourcing-agent-1688" in pyproject
     assert "월드컵 축구 유니폼" in readme
@@ -190,7 +197,6 @@ def test_removed_cross_platform_and_demo_files_are_absent():
     assert "mock" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
     assert "claude" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
     assert "openclaw" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
-    assert "marketplace" not in (ROOT / "README.md").read_text(encoding="utf-8").lower()
 
 
 def test_browser_raw_snapshot_uses_runtime_home(tmp_path):

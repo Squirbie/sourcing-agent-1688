@@ -31,6 +31,7 @@ def test_mcp_server_registers_expected_tools():
 
     assert "parse_1688_rendered_html" in tool_names
     assert "parse_1688_rendered_html_content" in tool_names
+    assert "parse_1688_network_payload_content" in tool_names
     assert "download_1688_product_assets_from_html_content" in tool_names
     assert "image_search_1688_products" in tool_names
     assert "check_1688_provider_capabilities" in tool_names
