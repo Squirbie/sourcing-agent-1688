@@ -45,7 +45,7 @@ def test_auto_provider_without_live_access_does_not_launch_browser(monkeypatch, 
 
     assert result.exit_code == 0
     assert payload["status"] == "provider_unavailable"
-    assert payload["error"]["code"] == "missing_live_provider"
+    assert payload["error"]["code"] == "chrome_devtools_required"
     assert payload["provider"] == "auto"
     assert payload["items"] == []
 
@@ -60,7 +60,7 @@ def test_auto_provider_routes_missing_credentials_to_chrome_or_explicit_setup(mo
 
     assert result.exit_code == 0
     assert payload["status"] == "provider_unavailable"
-    assert payload["selected_provider"] is None
+    assert payload["selected_provider"] == "chrome-devtools"
     assert payload["ready"] is False
-    assert payload["error"]["code"] == "missing_live_provider"
+    assert payload["error"]["code"] == "chrome_devtools_required"
     assert "Chrome DevTools" in payload["suggested_action"]

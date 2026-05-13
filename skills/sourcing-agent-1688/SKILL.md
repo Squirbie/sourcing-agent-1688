@@ -7,54 +7,54 @@ description: Use this skill when the user asks Codex Desktop to find, analyze, r
 
 Use this plugin for 1688 sourcing inside Codex Desktop.
 
-The plugin installs two MCP servers:
+The normal path is Chrome-first:
 
-- `chrome-devtools`: lets Codex inspect the user's Chrome page, DOM, network responses, screenshots, and JavaScript state.
-- `sourcing1688`: turns 1688 page HTML or captured network JSON into sourcing-friendly product data, assets, scores, and reports.
+- `chrome-devtools` reads the user's Chrome tab, DOM, screenshots, and network responses.
+- `sourcing1688` turns captured 1688 HTML/network JSON into product, seller, option, image, video, score, and asset manifest data.
 
-Prefer the user's already-open Chrome tab over managed browser launches. Do not repeatedly open and close Playwright browser windows for the same page.
+Do not start by telling the user to set API credentials. Use the visible Chrome page and captured network data first.
+
+## First-Run Chrome Setup
+
+If Chrome DevTools reports `DevToolsActivePort`, cannot connect, or has no pages:
+
+1. Call `open_chrome_devtools_setup`.
+2. Tell the user to allow/start the Chrome DevTools connection on the opened Chrome setup page.
+3. Have the user open or keep the 1688 page in that Chrome profile.
+4. Continue with Chrome DevTools page/network tools. If the MCP server failed before setup, use a new chat after Chrome is ready.
 
 ## Product URL Workflow
 
 When the user gives a 1688 product URL:
 
-1. Use Chrome DevTools tools to find or open the product page in Chrome.
-2. Wait for the product content to load.
-3. Inspect visible page state and network requests. Useful 1688 signals often appear in responses containing names like `offerDetail`, `offerWarnService`, `mtop.1688`, `getVideoById`, `video`, `trade`, `sku`, or `seller`.
-4. Evaluate `document.documentElement.outerHTML` or otherwise capture rendered HTML, then call `parse_1688_rendered_html_content`.
-5. For useful JSON responses, pass the response body to `parse_1688_network_payload_content`.
-6. Combine the parsed HTML and network result in the final answer. Prefer network values for trade, seller, SKU, and video data when present.
-7. If the user asks to save assets, call `download_1688_product_assets_from_html_content` with the rendered HTML and source URL.
+1. Use Chrome DevTools `list_pages`; if the product page is already open, select it.
+2. If it is not open, use Chrome DevTools to open the URL.
+3. Wait for the page to load and inspect visible page state.
+4. Capture rendered HTML and call `parse_1688_rendered_html_content`.
+5. Inspect network responses. Useful names include `mtop.1688`, `offerDetail`, `offerWarnService`, `getVideoById`, `trade`, `sku`, `seller`, and `video`.
+6. Pass useful JSON response bodies to `parse_1688_network_payload_content`.
+7. Combine HTML and network results. Prefer network values for trade, seller, SKU, and video when present.
+8. If the user asks to save assets, call `download_1688_product_assets_from_html_content`.
 
-Report product title, URL, price tiers, MOQ if present, sales/trade volume, repurchase rate, seller score, SKU/options, main/detail images, video findings, risks, and next checks for a Korean seller.
+Report the result like a Korean seller would need it: price tiers, MOQ if present, sales/trade volume, seller score, repurchase rate, options, image/video status, risks, and what to check before ordering a sample.
 
-If video UI is visible but the captured payload has `videoId=0`, empty `videoUrl`, or no `mp4`/`m3u8`, say that the page shows video metadata but the downloadable video URL was not exposed in the captured data. Keep looking at network responses before concluding that no video exists.
+If a video button is visible but captured data has no `mp4`/`m3u8`, keep checking network responses before concluding there is no video.
 
 ## Keyword Sourcing Workflow
 
-When the user asks to find products from a Korean keyword:
+When the user asks for products from a Korean keyword:
 
-1. Call `provider_check_1688` and `expand_sourcing_keywords`.
-2. If API credentials are ready, use `search_1688_products` or `recommend_1688_products`.
-3. If API credentials are not ready, use Chrome DevTools to open 1688 search/ranking pages in the user's Chrome session, then parse visible cards and captured network payloads.
-4. Do not fabricate candidates. If Chrome/API access is not ready, explain the one setup step needed.
-
-Always show which source was used: API, Chrome visible page/network, or local HTML.
+1. Call `expand_sourcing_keywords`.
+2. Use Chrome DevTools to open 1688 search pages with the Chinese keywords.
+3. Parse visible product cards and captured network payloads.
+4. Score candidates with the available product data.
+5. Do not invent products. If Chrome DevTools is not connected, call `open_chrome_devtools_setup` first.
 
 ## Asset Saving Workflow
 
-For images, detail HTML, attributes, and videos:
-
 1. Capture rendered HTML from Chrome DevTools.
-2. Call `download_1688_product_assets_from_html_content`.
-3. If network JSON contains video addresses, also call `parse_1688_network_payload_content` and include those video URLs in the analysis.
-4. Return the manifest path, saved directory, counts, failed assets, and video status.
+2. Capture relevant network JSON if available.
+3. Call `download_1688_product_assets_from_html_content`.
+4. Return manifest path, saved directory, counts, failed assets, and video status.
 
-## Provider Notes
-
-- `api`: use when 1688 Open Platform credentials are configured.
-- `chrome-devtools`: primary non-API path for what the user can actually see in Chrome.
-- `browser`: managed Playwright browser profile; use only when the user explicitly asks for that profile.
-- `local_html`: saved or copied page HTML.
-
-Keep the final answer practical for a seller: what looks promising, what is missing, what to verify before buying samples, and what data came from the page.
+Keep the final answer practical and source-aware: say whether data came from Chrome visible page, Chrome network, or saved HTML.

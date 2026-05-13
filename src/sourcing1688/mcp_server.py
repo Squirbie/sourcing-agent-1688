@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -232,6 +233,42 @@ async def open_1688_browser_profile(url: str = "https://www.1688.com") -> dict[s
         return await open_browser_profile(get_settings().browser_profile or get_settings().home / "browser-profile", url=url)
     except Exception as exc:  # noqa: BLE001
         return error_payload("browser_profile_open_failed", str(exc), status="provider_unavailable")
+
+
+@mcp.tool()
+def open_chrome_devtools_setup(open_1688: bool = True) -> dict[str, Any]:
+    """Open Chrome pages needed for first-run DevTools MCP auto-connect setup."""
+    setup_url = "chrome://inspect/#remote-debugging"
+    product_url = "https://www.1688.com"
+    try:
+        if sys.platform.startswith("win"):
+            subprocess.Popen(["cmd", "/c", "start", "", "chrome", setup_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if open_1688:
+                subprocess.Popen(["cmd", "/c", "start", "", "chrome", product_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-a", "Google Chrome", setup_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if open_1688:
+                subprocess.Popen(["open", "-a", "Google Chrome", product_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen(["google-chrome", setup_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if open_1688:
+                subprocess.Popen(["google-chrome", product_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as exc:  # noqa: BLE001
+        return error_payload(
+            "chrome_devtools_setup_failed",
+            str(exc),
+            status="provider_unavailable",
+            suggested_action="Open chrome://inspect/#remote-debugging in Chrome, enable the local debugging connection, then open the 1688 page again.",
+        )
+    return {
+        "status": "ok",
+        "opened": [setup_url, product_url] if open_1688 else [setup_url],
+        "next_steps": [
+            "In Chrome, allow or start the local DevTools debugging connection if prompted.",
+            "Open the target 1688 page in the same Chrome profile and log in normally if needed.",
+            "If chrome-devtools failed earlier in this Codex session, restart Codex or open a new chat after enabling the Chrome connection.",
+        ],
+    }
 
 
 @mcp.tool()

@@ -44,10 +44,10 @@ class Auto1688Provider(Base1688Provider):
             hot_keywords=True,
             rankings=True,
             image_search=True,
-            required_env=["ALI1688 credentials"],
+            required_env=["Chrome DevTools MCP connection"],
             notes=[
-                "Chooses api when API credentials exist.",
-                "Does not launch the managed browser provider implicitly. Use Chrome DevTools page/network capture or provider=browser explicitly.",
+                "Use Chrome DevTools page/network capture for non-API live 1688 pages.",
+                "Does not launch the managed browser provider implicitly.",
             ],
         )
 
@@ -57,13 +57,13 @@ class Auto1688Provider(Base1688Provider):
         return None
 
     def _missing_live_provider(self, response_type):
-        message = "No API provider is configured, and auto will not launch a managed browser."
-        suggested_action = "Set ALI1688 credentials, use Chrome DevTools to capture rendered HTML/network JSON, or explicitly choose provider=browser."
+        message = "Auto search needs a live 1688 data source from Chrome DevTools page/network capture."
+        suggested_action = "Use Chrome DevTools to open the 1688 page, capture rendered HTML/network JSON, then parse it with sourcing1688 tools. If Chrome DevTools cannot connect, call open_chrome_devtools_setup."
         return response_type(
             status="provider_unavailable",
             message=message,
             suggested_action=suggested_action,
-            error=structured_error("missing_live_provider", message, suggested_action=suggested_action),
+            error=structured_error("chrome_devtools_required", message, suggested_action=suggested_action),
             provider=self.name,
             provider_version=self.provider_version,
             source_type="auto",

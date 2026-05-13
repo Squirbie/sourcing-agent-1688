@@ -21,6 +21,8 @@ KEYWORD_MAP: dict[str, list[str]] = {
     "\ud06c\ub77c\ud504\ud2b8 \ud3ec\uc7a5\ubd09\ud22c": ["\u725b\u76ae\u7eb8\u888b", "\u5916\u5356\u5305\u88c5\u888b", "\u98df\u54c1\u5305\u88c5\u888b", "\u624b\u63d0\u725b\u76ae\u7eb8\u888b"],
     "\ub7ec\ub2dd\ud654": ["\u8dd1\u6b65\u978b", "\u8fd0\u52a8\u978b", "\u900f\u6c14\u8dd1\u978b", "\u4f11\u95f2\u8fd0\u52a8\u978b"],
     "\ub0a8\uc131 \uc18d\uc637": ["\u7537\u58eb\u5185\u88e4", "\u5e73\u89d2\u88e4", "\u7eaf\u68c9\u7537\u5185\u88e4", "\u7537\u58eb\u56db\u89d2\u88e4"],
+    "\uc2a4\ub9c8\ud2b8\ud3f0 \uac70\uce58\ub300": ["\u624b\u673a\u652f\u67b6", "\u8f66\u8f7d\u624b\u673a\u652f\u67b6", "\u684c\u9762\u624b\u673a\u652f\u67b6", "\u61d2\u4eba\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
+    "\ud734\ub300\ud3f0 \uac70\uce58\ub300": ["\u624b\u673a\u652f\u67b6", "\u8f66\u8f7d\u624b\u673a\u652f\u67b6", "\u684c\u9762\u624b\u673a\u652f\u67b6", "\u61d2\u4eba\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
 }
 
 COMPONENT_MAP: dict[str, list[str]] = {
@@ -35,6 +37,9 @@ COMPONENT_MAP: dict[str, list[str]] = {
     "\ud30c\uc6b0\uce58": ["\u6536\u7eb3\u888b", "\u5316\u5986\u5305"],
     "\uc120\ud48d\uae30": ["\u4fbf\u643a\u98ce\u6247", "\u624b\u6301\u5c0f\u98ce\u6247"],
     "\uc18d\uc637": ["\u7537\u58eb\u5185\u88e4", "\u5e73\u89d2\u88e4"],
+    "\uc2a4\ub9c8\ud2b8\ud3f0": ["\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
+    "\ud734\ub300\ud3f0": ["\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
+    "\uac70\uce58\ub300": ["\u624b\u673a\u652f\u67b6", "\u8f66\u8f7d\u624b\u673a\u652f\u67b6", "\u684c\u9762\u624b\u673a\u652f\u67b6"],
 }
 
 
@@ -94,5 +99,5 @@ def expand_keywords(keyword: str) -> KeywordExpansion:
         original_keyword=normalized,
         keywords=[normalized],
         needs_review=True,
-        note="No curated Chinese sourcing mapping exists yet. Provide a Chinese keyword, API credentials, or a 1688 page/HTML for analysis.",
+        note="No curated Chinese sourcing mapping exists yet. Provide a Chinese keyword or open a 1688 page in Chrome for analysis.",
     )

@@ -31,7 +31,7 @@ def test_cli_search_json_with_auto_provider_does_not_launch_browser(monkeypatch,
     payload = parse_json_output(result)
 
     assert payload["status"] == "provider_unavailable"
-    assert payload["error"]["code"] == "missing_live_provider"
+    assert payload["error"]["code"] == "chrome_devtools_required"
     assert payload["items"] == []
 
 

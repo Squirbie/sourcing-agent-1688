@@ -68,3 +68,4 @@ def test_mcp_tool_list_includes_network_payload_parser():
     tool_names = {tool.name for tool in mcp._tool_manager.list_tools()}
 
     assert "parse_1688_network_payload_content" in tool_names
+    assert "open_chrome_devtools_setup" in tool_names

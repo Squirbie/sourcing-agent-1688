@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from sourcing1688 import mcp_server
 from sourcing1688.mcp_server import mcp
 from sourcing1688.providers.browser_provider import Browser1688Provider
 
@@ -38,3 +39,21 @@ def test_mcp_server_registers_expected_tools():
     assert "provider_check_1688" in tool_names
     assert "check_1688_browser_profile" in tool_names
     assert "open_1688_browser_profile" in tool_names
+    assert "open_chrome_devtools_setup" in tool_names
+
+
+def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch):
+    calls = []
+
+    class MockPopen:
+        def __init__(self, args, stdout=None, stderr=None):
+            calls.append(args)
+
+    monkeypatch.setattr(mcp_server.subprocess, "Popen", MockPopen)
+    monkeypatch.setattr(mcp_server.sys, "platform", "win32")
+
+    payload = mcp_server.open_chrome_devtools_setup(open_1688=True)
+
+    assert payload["status"] == "ok"
+    assert any("chrome://inspect/#remote-debugging" in call for call in calls)
+    assert any("https://www.1688.com" in call for call in calls)

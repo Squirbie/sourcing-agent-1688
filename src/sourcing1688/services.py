@@ -122,18 +122,18 @@ def check_provider(provider_name: str) -> dict[str, Any]:
         if not missing_env:
             payload.update({"status": "live_not_verified", "ready": True, "selected_provider": "api", "suggested_action": "Run an opt-in live smoke test before treating API results as verified."})
         else:
-            message = "No API credentials are configured, and auto will not launch a managed browser."
+            message = "Auto provider needs Chrome DevTools page/network capture for live 1688 data."
             payload.update(
                 {
                     "status": "provider_unavailable",
                     "ready": False,
-                    "selected_provider": None,
-                    "missing_env": missing_env,
-                    "suggested_action": "Set 1688 API credentials, use Chrome DevTools to capture rendered HTML/network JSON, or explicitly choose provider=browser.",
+                    "selected_provider": "chrome-devtools",
+                    "missing_env": [],
+                    "suggested_action": "Use Chrome DevTools to open the 1688 page and capture rendered HTML/network JSON. If Chrome DevTools reports DevToolsActivePort, call open_chrome_devtools_setup first.",
                     "error": structured_error(
-                        "missing_live_provider",
+                        "chrome_devtools_required",
                         message,
-                        suggested_action="Use API credentials, Chrome DevTools page/network capture, or explicit provider=browser.",
+                        suggested_action="Use Chrome DevTools page/network capture, or call open_chrome_devtools_setup for first-run setup.",
                     ).model_dump(mode="json"),
                 }
             )
