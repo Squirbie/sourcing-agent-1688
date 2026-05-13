@@ -1,6 +1,6 @@
 # 1688 Sourcing Agent
 
-Codex Desktop에서 `@sourcing-agent-1688`로 1688 상품 페이지를 보고 분석하는 소싱 에이전트입니다.
+Codex Desktop에서 `@sourcing-agent-1688`로 1688 상품 페이지를 보고 분석하는 소싱 에이전트입니다. Windows와 macOS 둘 다 같은 설치 명령을 사용합니다.
 
 사용자가 Chrome에서 보고 있는 1688 페이지의 화면, DOM, 네트워크 응답을 Codex가 함께 읽어서 상품 정보, 판매자 정보, 이미지, 영상 후보, 상세 자료를 정리합니다.
 
@@ -18,7 +18,7 @@ uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agen
 - `1688 Sourcing Agent` 플러그인 활성화
 - `sourcing1688` MCP 서버 등록
 - `chrome-devtools` MCP 서버 등록
-- Chrome DevTools 연결 설정 페이지 열기
+- 현재 OS에 맞는 방식으로 Chrome DevTools 연결 설정 페이지 열기
 
 설치가 끝나면 Codex Desktop을 완전히 종료한 뒤 다시 켜고, 새 채팅에서 `@sourcing-agent-1688`를 선택하면 됩니다.
 

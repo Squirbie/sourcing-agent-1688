@@ -160,7 +160,7 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "--refresh" in mcp["mcpServers"]["sourcing1688"]["args"]
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
-    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "npx"
     assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
@@ -175,7 +175,7 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert bundled_plugin["mcpServers"] == "./.mcp.json"
     assert "mcpServers" in bundled_mcp
     assert "mcp_servers" not in bundled_mcp
-    assert bundled_mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert bundled_mcp["mcpServers"]["chrome-devtools"]["command"] == "npx"
     assert "chrome-devtools-mcp@latest" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--auto-connect" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "sourcing1688-mcp" in pyproject

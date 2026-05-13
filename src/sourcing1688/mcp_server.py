@@ -8,6 +8,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from sourcing1688.browser_profile import open_browser_profile
+from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.assets.downloader import download_assets as download_parsed_assets
@@ -238,24 +239,20 @@ async def open_1688_browser_profile(url: str = "https://www.1688.com") -> dict[s
 @mcp.tool()
 def open_chrome_devtools_setup() -> dict[str, Any]:
     """Open Chrome pages needed for first-run DevTools MCP auto-connect setup."""
-    setup_url = "chrome://inspect/#remote-debugging"
     try:
-        if sys.platform.startswith("win"):
-            subprocess.Popen(["cmd", "/c", "start", "", "chrome", setup_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-a", "Google Chrome", setup_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        else:
-            subprocess.Popen(["google-chrome", setup_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        command = chrome_devtools_setup_command()
+        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as exc:  # noqa: BLE001
         return error_payload(
             "chrome_devtools_setup_failed",
             str(exc),
             status="provider_unavailable",
-            suggested_action="Open chrome://inspect/#remote-debugging in Chrome, enable the local debugging connection, then open the 1688 page again.",
+            suggested_action=f"Open {CHROME_DEVTOOLS_SETUP_URL} in Chrome, enable the local debugging connection, then open the 1688 page again.",
         )
     return {
         "status": "ok",
-        "opened": [setup_url],
+        "opened": [CHROME_DEVTOOLS_SETUP_URL],
+        "command": command,
         "next_steps": [
             "In Chrome, allow or start the local DevTools debugging connection if prompted.",
             "Then open the target 1688 page yourself in the same Chrome profile.",

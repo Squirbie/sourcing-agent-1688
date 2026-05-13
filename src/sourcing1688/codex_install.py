@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command
+
 
 REPO_URL = "https://github.com/Squirbie/sourcing-agent-1688.git"
 GIT_REPO_URL = f"git+{REPO_URL}"
@@ -137,14 +139,12 @@ def _copy_plugin_bundle(home: Path) -> dict[str, Any]:
 
 
 def _open_chrome_setup_page() -> dict[str, Any]:
-    url = "chrome://inspect/#remote-debugging"
-    if sys.platform.startswith("win"):
-        result = _run(["cmd", "/c", "start", "", url])
-    elif sys.platform == "darwin":
-        result = _run(["open", url])
-    else:
-        result = _run(["xdg-open", url])
-    return {"url": url, "result": result}
+    command = chrome_devtools_setup_command()
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError as exc:
+        return {"url": CHROME_DEVTOOLS_SETUP_URL, "command": command, "ok": False, "error": str(exc)}
+    return {"url": CHROME_DEVTOOLS_SETUP_URL, "command": command, "ok": True, "pid": process.pid}
 
 
 def _add_sourcing_mcp() -> list[dict[str, Any]]:

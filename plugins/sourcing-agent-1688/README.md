@@ -1,6 +1,6 @@
 # 1688 Sourcing Agent
 
-Codex Desktop에서 Chrome에 열린 1688 상품 페이지를 함께 보고 분석하는 소싱 에이전트입니다.
+Codex Desktop에서 Chrome에 열린 1688 상품 페이지를 함께 보고 분석하는 소싱 에이전트입니다. Windows와 macOS 둘 다 같은 설치 명령을 사용합니다.
 
 권장 설치 명령:
 

@@ -14,10 +14,8 @@
       }
     },
     "chrome-devtools": {
-      "command": "cmd",
+      "command": "npx",
       "args": [
-        "/c",
-        "npx",
         "-y",
         "chrome-devtools-mcp@latest",
         "--auto-connect",
@@ -26,8 +24,6 @@
         "--no-performance-crux"
       ],
       "env": {
-        "SystemRoot": "C:\\Windows",
-        "PROGRAMFILES": "C:\\Program Files",
         "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "true"
       }
     }

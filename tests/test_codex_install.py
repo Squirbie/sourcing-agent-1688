@@ -86,6 +86,24 @@ def test_install_codex_cli_json_can_be_mocked(monkeypatch, tmp_path):
     assert parsed["mcp_servers"] == ["sourcing1688", "chrome-devtools"]
 
 
+def test_chrome_mcp_registration_is_platform_specific(monkeypatch):
+    commands = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        return Completed()
+
+    monkeypatch.setattr(codex_install.subprocess, "run", fake_run)
+    monkeypatch.setattr(codex_install.sys, "platform", "darwin")
+
+    codex_install._add_chrome_mcp()
+
+    add = [command for command in commands if command[:4] == ["codex", "mcp", "add", "chrome-devtools"]][0]
+    assert "npx" in add
+    assert "cmd" not in add
+    assert "chrome-devtools-mcp@latest" in add
+
+
 def test_uninstall_codex_cli_json_can_be_mocked(monkeypatch):
     monkeypatch.setattr("sourcing1688.cli.uninstall_codex", lambda remove_runtime=False: {"status": "ok", "remove_runtime": remove_runtime})
 

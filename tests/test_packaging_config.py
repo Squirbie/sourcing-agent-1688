@@ -18,7 +18,7 @@ def test_root_codex_plugin_manifest_points_to_root_mcp_json():
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "--refresh" in mcp["mcpServers"]["sourcing1688"]["args"]
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
-    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "npx"
     assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
@@ -44,7 +44,7 @@ def test_codex_marketplace_points_to_bundled_plugin_layout():
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "--refresh" in mcp["mcpServers"]["sourcing1688"]["args"]
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
-    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "cmd"
+    assert mcp["mcpServers"]["chrome-devtools"]["command"] == "npx"
     assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
