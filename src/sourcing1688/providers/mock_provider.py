@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -31,13 +32,15 @@ class Mock1688Provider(Base1688Provider):
     source_type = "mock"
 
     def __init__(self, fixture_dir: str | Path | None = None) -> None:
-        self.fixture_dir = Path(fixture_dir) if fixture_dir else Path(__file__).resolve().parents[3] / "tests" / "fixtures"
+        self.fixture_dir = Path(fixture_dir) if fixture_dir else None
 
     def _read_json(self, filename: str) -> dict[str, Any]:
-        return json.loads((self.fixture_dir / filename).read_text(encoding="utf-8"))
+        return json.loads(self._read_text(filename))
 
     def _read_text(self, filename: str) -> str:
-        return (self.fixture_dir / filename).read_text(encoding="utf-8")
+        if self.fixture_dir is not None:
+            return (self.fixture_dir / filename).read_text(encoding="utf-8")
+        return (resources.files("sourcing1688.fixtures") / filename).read_text(encoding="utf-8")
 
     def capabilities(self) -> ProviderCapability:
         return ProviderCapability(

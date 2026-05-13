@@ -12,6 +12,13 @@ def test_mock_provider_implements_base_contract():
     assert isinstance(provider, Base1688Provider)
 
 
+def test_mock_provider_uses_packaged_fixtures_by_default():
+    provider = Mock1688Provider()
+
+    assert provider.fixture_dir is None
+    assert provider._read_json("search_result_sample.json")["items"][0]["offer_id"] == "123456789"
+
+
 @pytest.mark.anyio
 async def test_mock_provider_returns_fixture_search_and_detail():
     provider = Mock1688Provider()

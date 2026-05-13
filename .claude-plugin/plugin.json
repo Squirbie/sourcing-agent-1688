@@ -1,7 +1,7 @@
 {
   "name": "sourcing-agent-1688",
   "description": "1688 Sourcing Agent: JSON-first sourcing CLI and MCP tools for Korean sellers.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "sourcing1688 contributors"
   },

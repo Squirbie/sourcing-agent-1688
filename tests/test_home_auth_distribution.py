@@ -159,7 +159,7 @@ def test_distribution_files_are_portable_and_documented():
     assert "C:/Users" not in json.dumps(mcp)
     assert "C:\\Users" not in json.dumps(mcp)
     assert "mcpServers" in standard_mcp
-    assert plugin["version"] == "0.3.0"
+    assert plugin["version"] == "0.3.1"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["mcpServers"] == "./.mcp.codex.json"
     assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
