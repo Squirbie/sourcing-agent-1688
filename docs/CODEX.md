@@ -6,7 +6,7 @@ Install:
 codex plugin marketplace add https://github.com/Squirbie/sourcing-agent-1688.git
 ```
 
-Then open `/plugins`, install `sourcing-agent-1688`, and check MCP tools.
+Then open `/plugins`, choose `1688 Sourcing Agent`, click `Add to Codex`, open a new chat, and check MCP tools.
 
 If the plugin does not appear in the Codex app, restart the app completely and check `/plugins` again. Private repositories can behave differently between the CLI and Desktop app. For a quick tool-level check, add the MCP server directly:
 
@@ -31,7 +31,7 @@ Codex uses:
 
 - `plugins/sourcing-agent-1688/.codex-plugin/plugin.json`
 - `.agents/plugins/marketplace.json`
-- `plugins/sourcing-agent-1688/.mcp.json`
+- `plugins/sourcing-agent-1688/.mcp.json` with `mcpServers`
 - `plugins/sourcing-agent-1688/skills/`
 
 The root `.codex-plugin`, `.mcp.codex.json`, and `skills/` folders remain for local/dev compatibility.

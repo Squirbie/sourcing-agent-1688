@@ -165,14 +165,16 @@ def test_distribution_files_are_portable_and_documented():
     assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
     assert marketplace["plugins"][0]["source"]["source"] == "local"
     assert marketplace["plugins"][0]["source"]["path"] == "./plugins/sourcing-agent-1688"
-    assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
+    assert marketplace["plugins"][0]["policy"]["installation"] == "AVAILABLE"
     assert marketplace["plugins"][0]["policy"]["authentication"] == "ON_INSTALL"
     assert (bundle_root / "README.md").exists()
     assert (bundle_root / "skills" / "sourcing-agent-1688" / "SKILL.md").exists()
     assert bundled_plugin["name"] == "sourcing-agent-1688"
     assert bundled_plugin["mcpServers"] == "./.mcp.json"
-    assert bundled_mcp["mcp_servers"]["sourcing1688"]["command"] == "uvx"
-    assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in bundled_mcp["mcp_servers"]["sourcing1688"]["args"]
+    assert "mcpServers" in bundled_mcp
+    assert "mcp_servers" not in bundled_mcp
+    assert bundled_mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
+    assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in bundled_mcp["mcpServers"]["sourcing1688"]["args"]
     assert claude_plugin["name"] == "sourcing-agent-1688"
     assert claude_plugin["mcpServers"] == "./.mcp.json"
     assert claude_marketplace["plugins"][0]["source"] == "./"

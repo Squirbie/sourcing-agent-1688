@@ -1,5 +1,5 @@
 {
-  "mcp_servers": {
+  "mcpServers": {
     "sourcing1688": {
       "command": "uvx",
       "args": [

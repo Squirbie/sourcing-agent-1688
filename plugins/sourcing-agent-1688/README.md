@@ -46,9 +46,11 @@ codex plugin marketplace add https://github.com/Squirbie/sourcing-agent-1688.git
 그 다음:
 
 1. Codex에서 `/plugins`
-2. `1688 Sourcing Agent` 설치
-3. 새 세션에서 `/mcp` 확인
-4. provider 준비 상태 확인
+2. `1688 Sourcing Agent` 선택
+3. `Codex에 추가` 클릭
+4. 새 채팅 열기
+5. `/mcp`에서 `sourcing1688` MCP server 확인
+6. `@1688 Sourcing Agent`로 테스트
 
 ```powershell
 sourcing1688 provider-check --provider auto --json
@@ -60,8 +62,9 @@ sourcing1688 provider-check --provider auto --json
 
 1. Codex 앱을 완전히 종료한 뒤 다시 엽니다.
 2. `/plugins`에서 `1688 Sourcing Agent`를 다시 검색합니다.
-3. repo가 private이면 Codex 앱 UI가 marketplace를 읽지 못할 수 있습니다. 이때는 잠깐 public으로 테스트하거나 local marketplace/direct MCP 방식으로 먼저 확인하세요.
-4. 그래도 안 보이면 아래 직접 MCP 연결 방식으로 도구부터 테스트합니다.
+3. `+` 또는 `Codex에 추가`를 눌러 플러그인을 추가합니다.
+4. repo가 private이면 Codex 앱 UI가 marketplace를 읽지 못할 수 있습니다. 이때는 잠깐 public으로 테스트하거나 local marketplace/direct MCP 방식으로 먼저 확인하세요.
+5. 그래도 안 보이면 아래 직접 MCP 연결 방식으로 도구부터 테스트합니다.
 
 직접 MCP 연결 예시:
 
