@@ -7,10 +7,32 @@ from typing import Any
 from bs4 import BeautifulSoup
 
 
+INTERESTING_KEYS = {
+    "offerId",
+    "offer_id",
+    "subject",
+    "priceRange",
+    "skuOptions",
+    "monthSold",
+    "offerModel",
+    "sellerModel",
+    "skuModel",
+    "tradeModel",
+}
+
+BALANCED_VALUE_KEYS = [
+    "globalData",
+    "offerModel",
+    "sellerModel",
+    "skuModel",
+    "tradeModel",
+]
+
+
 def _walk_json(value: Any) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     if isinstance(value, dict):
-        if any(key in value for key in ["offerId", "offer_id", "subject", "priceRange", "skuOptions", "monthSold"]):
+        if any(key in value for key in INTERESTING_KEYS):
             found.append(value)
         for child in value.values():
             found.extend(_walk_json(child))
@@ -18,6 +40,64 @@ def _walk_json(value: Any) -> list[dict[str, Any]]:
         for child in value:
             found.extend(_walk_json(child))
     return found
+
+
+def _balanced_json_slice(text: str, start: int) -> str | None:
+    opener = text[start]
+    closer = "}" if opener == "{" else "]" if opener == "[" else None
+    if closer is None:
+        return None
+
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == opener:
+            depth += 1
+        elif char == closer:
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    return None
+
+
+def _extract_balanced_key_values(text: str, key: str) -> list[Any]:
+    values: list[Any] = []
+    pattern = f'"{key}"'
+    cursor = 0
+    while True:
+        key_index = text.find(pattern, cursor)
+        if key_index == -1:
+            break
+        cursor = key_index + len(pattern)
+        colon_index = text.find(":", cursor)
+        if colon_index == -1:
+            continue
+        value_index = colon_index + 1
+        while value_index < len(text) and text[value_index].isspace():
+            value_index += 1
+        if value_index >= len(text) or text[value_index] not in "{[":
+            continue
+        raw = _balanced_json_slice(text, value_index)
+        if not raw:
+            continue
+        try:
+            values.append(json.loads(raw))
+        except json.JSONDecodeError:
+            continue
+    return values
 
 
 def extract_embedded_json_candidates(soup: BeautifulSoup, html: str) -> list[dict[str, Any]]:
@@ -39,6 +119,10 @@ def extract_embedded_json_candidates(soup: BeautifulSoup, html: str) -> list[dic
                 candidates.extend(_walk_json(json.loads(raw)))
             except json.JSONDecodeError:
                 continue
+        for key in BALANCED_VALUE_KEYS:
+            for value in _extract_balanced_key_values(text, key):
+                candidates.append({key: value})
+                candidates.extend(_walk_json(value))
     return candidates
 
 
@@ -49,4 +133,3 @@ def merge_candidates(candidates: list[dict[str, Any]]) -> dict[str, Any]:
             if value not in (None, "", [], {}) and key not in merged:
                 merged[key] = value
     return merged
-

@@ -45,3 +45,72 @@ def test_rendered_html_parser_accepts_source_url_for_chrome_captured_html():
     assert result.item.offer_id == "1018990720574"
     assert result.item.url == "https://detail.1688.com/offer/1018990720574.html"
     assert result.item.main_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN-chrome-main.jpg"]
+
+
+def test_rendered_html_parser_extracts_1688_model_trade_and_seller_fields():
+    html = """
+    <html>
+      <head><title>Fallback title</title></head>
+      <body>
+        <script>
+        window.__DATA__ = {
+          "global": {
+            "globalData": {
+              "model": {
+                "offerModel": {
+                  "offerId": 1018990720574,
+                  "subject": "宠物硅胶梳通用梳子",
+                  "leafCategoryName": "宠物梳子"
+                },
+                "sellerModel": {
+                  "companyName": "义乌市捷煜日用百货有限公司",
+                  "sellerIdentity": "tp",
+                  "winportUrl": "https://shop.example.1688.com",
+                  "sellerSign": {"signs": {"isTp": true, "isFactoryDealer": false}}
+                },
+                "tradeModel": {
+                  "beginAmount": 1,
+                  "canBookedAmount": 35282,
+                  "priceDisplay": "3.74",
+                  "saleCount": 210,
+                  "offerPriceModel": {
+                    "currentPrices": [{"beginAmount": 1, "price": "3.74"}]
+                  }
+                },
+                "skuModel": {
+                  "skuProps": [
+                    {
+                      "prop": "颜色",
+                      "value": [
+                        {
+                          "name": "粉色小号",
+                          "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN-option.jpg"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        };
+        </script>
+      </body>
+    </html>
+    """
+
+    result = parse_rendered_html(html)
+    detail = result.item
+
+    assert detail.offer_id == "1018990720574"
+    assert detail.title_zh == "宠物硅胶梳通用梳子"
+    assert detail.category == "宠物梳子"
+    assert detail.price_tiers[0].price == 3.74
+    assert detail.price_tiers[0].min_quantity == 1
+    assert detail.stock == 35282
+    assert detail.trade_volume == 210
+    assert detail.seller.name == "义乌市捷煜日用百货有限公司"
+    assert detail.seller.url == "https://shop.example.1688.com"
+    assert detail.sku_options[0].name == "颜色"
+    assert detail.sku_options[0].values == ["粉色小号"]
+    assert detail.option_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN-option.jpg"]
