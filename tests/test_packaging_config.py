@@ -27,3 +27,20 @@ def test_plugin_manifest_points_to_codex_mcp_json():
 
     assert payload["name"] == "sourcing-agent-1688"
     assert payload["mcpServers"] == "./.mcp.codex.json"
+
+
+def test_bundled_codex_plugin_layout_is_explicit():
+    marketplace = json.loads((ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+    bundle_root = ROOT / "plugins" / "sourcing-agent-1688"
+    plugin = json.loads((bundle_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    mcp = json.loads((bundle_root / ".mcp.codex.json").read_text(encoding="utf-8"))
+
+    assert marketplace["plugins"][0]["source"] == {
+        "source": "local",
+        "path": "./plugins/sourcing-agent-1688",
+    }
+    assert marketplace["plugins"][0]["policy"]["authentication"] == "ON_INSTALL"
+    assert plugin["name"] == "sourcing-agent-1688"
+    assert plugin["mcpServers"] == "./.mcp.codex.json"
+    assert mcp["mcp_servers"]["sourcing1688"]["command"] == "uvx"
+    assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcp_servers"]["sourcing1688"]["args"]

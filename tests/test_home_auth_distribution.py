@@ -147,6 +147,9 @@ def test_distribution_files_are_portable_and_documented():
     standard_mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
     plugin = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     marketplace = json.loads((ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+    bundle_root = ROOT / "plugins" / "sourcing-agent-1688"
+    bundled_plugin = json.loads((bundle_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    bundled_mcp = json.loads((bundle_root / ".mcp.codex.json").read_text(encoding="utf-8"))
     claude_plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     claude_marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -161,7 +164,14 @@ def test_distribution_files_are_portable_and_documented():
     assert plugin["mcpServers"] == "./.mcp.codex.json"
     assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
     assert marketplace["plugins"][0]["source"]["source"] == "local"
-    assert marketplace["plugins"][0]["source"]["path"] == "./"
+    assert marketplace["plugins"][0]["source"]["path"] == "./plugins/sourcing-agent-1688"
+    assert marketplace["plugins"][0]["policy"]["authentication"] == "ON_INSTALL"
+    assert (bundle_root / "README.md").exists()
+    assert (bundle_root / "skills" / "sourcing-agent-1688" / "SKILL.md").exists()
+    assert bundled_plugin["name"] == "sourcing-agent-1688"
+    assert bundled_plugin["mcpServers"] == "./.mcp.codex.json"
+    assert bundled_mcp["mcp_servers"]["sourcing1688"]["command"] == "uvx"
+    assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in bundled_mcp["mcp_servers"]["sourcing1688"]["args"]
     assert claude_plugin["name"] == "sourcing-agent-1688"
     assert claude_plugin["mcpServers"] == "./.mcp.json"
     assert claude_marketplace["plugins"][0]["source"] == "./"
@@ -198,5 +208,6 @@ def test_distribution_docs_explain_url_and_local_marketplace_modes():
 
     assert ".mcp.codex.json" in doc
     assert "Claude" in doc
-    assert 'path: "./"' in doc
+    assert 'path: "./plugins/sourcing-agent-1688"' in doc
+    assert "direct MCP" in doc
     assert "uv run pytest -q -ra" in doc

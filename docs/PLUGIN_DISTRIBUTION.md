@@ -10,10 +10,12 @@ https://github.com/Squirbie/sourcing-agent-1688
 
 Codex용 파일:
 
-- `.codex-plugin/plugin.json`
+- `plugins/sourcing-agent-1688/.codex-plugin/plugin.json`
 - `.agents/plugins/marketplace.json`
-- `.mcp.codex.json`
-- `skills/`
+- `plugins/sourcing-agent-1688/.mcp.codex.json`
+- `plugins/sourcing-agent-1688/skills/`
+
+repo root의 `.codex-plugin`, `.mcp.codex.json`, `skills/`는 local/dev 호환용으로 유지합니다. Codex marketplace entry는 앱 UI가 plugin root를 더 명확히 찾도록 `path: "./plugins/sourcing-agent-1688"`를 사용합니다.
 
 설치:
 
@@ -22,6 +24,8 @@ codex plugin marketplace add https://github.com/Squirbie/sourcing-agent-1688.git
 ```
 
 설치 후 `/plugins`에서 `1688 Sourcing Agent`를 설치하고 `/mcp`에서 도구가 보이는지 확인합니다.
+
+앱에 보이지 않으면 Codex 앱을 완전히 재시작하세요. private repo는 앱 UI가 Git credential을 CLI와 다르게 다룰 수 있으니, 빠른 확인은 public 테스트나 local marketplace/direct MCP 연결을 권장합니다.
 
 ## Claude Code
 
@@ -52,7 +56,22 @@ openclaw plugins inspect sourcing-agent-1688
 - Codex: `.mcp.codex.json` (`mcp_servers`)
 - Claude Code / OpenClaw 호환: `.mcp.json` (`mcpServers`)
 
-Codex marketplace entry는 repo root가 plugin root라서 `path: "./"`를 사용합니다.
+Codex marketplace bundle의 `.mcp.codex.json`은 GitHub 설치 위치와 무관하게 실행되도록 `uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing1688-mcp` 방식을 사용합니다. root local-dev용 `.mcp.codex.json`은 repo root에서 `uv run`으로 실행하는 개발용 설정입니다.
+
+직접 MCP fallback 예시:
+
+```toml
+[mcp_servers.sourcing1688]
+command = "uv"
+args = ["run", "sourcing1688-mcp"]
+cwd = "C:/path/to/sourcing-agent-1688"
+startup_timeout_sec = 60
+tool_timeout_sec = 120
+
+[mcp_servers.sourcing1688.env]
+SOURCING1688_PROVIDER = "auto"
+SOURCING1688_HOME = "~/.sourcing1688"
+```
 
 ## 로컬 검증
 
