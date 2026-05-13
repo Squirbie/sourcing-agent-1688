@@ -159,14 +159,14 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert "mcp_servers" not in mcp
     assert mcp["mcpServers"]["sourcing1688"]["command"] == "uvx"
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
-    assert plugin["version"] == "0.5.1"
+    assert plugin["version"] == "0.5.2"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert marketplace["plugins"][0]["source"] == {"source": "local", "path": "./plugins/sourcing-agent-1688"}
     assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert bundled_plugin["name"] == "sourcing-agent-1688"
-    assert bundled_plugin["version"] == "0.5.1"
+    assert bundled_plugin["version"] == "0.5.2"
     assert bundled_plugin["mcpServers"] == "./.mcp.json"
     assert "mcpServers" in bundled_mcp
     assert "mcp_servers" not in bundled_mcp

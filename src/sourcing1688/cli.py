@@ -62,6 +62,10 @@ def _handle_exception(exc: Exception, *, json_output: bool, code: str = "command
     raise exc
 
 
+def _is_offer_id_error(exc: ValueError) -> bool:
+    return "offer_id" in str(exc) or "1688 offer" in str(exc)
+
+
 def _zip_manifest_dir(result) -> None:
     if not result.manifest or result.manifest.zip_path:
         return
@@ -237,7 +241,9 @@ def analyze_url_command(
     try:
         result = anyio.run(partial(analyze_product_url, url, provider_name=provider))
     except ValueError as exc:
-        _echo_json(error_payload("invalid_offer_id", str(exc)), exit_code=1)
+        if _is_offer_id_error(exc):
+            _echo_json(error_payload("invalid_offer_id", str(exc)), exit_code=1)
+        _handle_exception(exc, json_output=json_output)
         return
     except Exception as exc:  # noqa: BLE001
         _handle_exception(exc, json_output=json_output)

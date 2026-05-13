@@ -11,8 +11,15 @@ VIDEO_EXTENSIONS = (".mp4", ".m3u8", ".mov")
 PLACEHOLDER_MARKERS = ("lazyload", "placeholder", "loading.gif", "blank.gif", "transparent")
 
 
+def safe_urlparse(url: str):
+    try:
+        return urlparse(url)
+    except ValueError:
+        return None
+
+
 def normalize_url(url: str) -> str | None:
-    url = url.strip().strip("'\"")
+    url = url.strip().strip("'\"").rstrip("),.;]}")
     if not url or url.startswith("data:"):
         return None
     if url.startswith("//"):
@@ -23,6 +30,11 @@ def normalize_url(url: str) -> str | None:
         return None
     lowered = url.lower()
     if any(marker in lowered for marker in PLACEHOLDER_MARKERS):
+        return None
+    parsed = safe_urlparse(url)
+    if not parsed or not parsed.netloc:
+        return None
+    if any(char in parsed.netloc for char in "[]*"):
         return None
     return url
 
@@ -47,7 +59,10 @@ def extract_urls_from_text(text: str) -> tuple[list[str], list[str]]:
         if not normalized:
             continue
         lowered = normalized.lower()
-        if any(lowered.split("?")[0].endswith(ext) for ext in VIDEO_EXTENSIONS) or "video" in urlparse(lowered).netloc:
+        parsed = safe_urlparse(lowered)
+        if not parsed:
+            continue
+        if any(lowered.split("?")[0].endswith(ext) for ext in VIDEO_EXTENSIONS) or "video" in parsed.netloc:
             videos.append(normalized)
         elif any(host in lowered for host in IMAGE_HOST_MARKERS) or re.search(r"\.(jpe?g|png|webp|gif)(?:\?|$)", lowered):
             images.append(normalized)
@@ -96,4 +111,3 @@ def extract_assets(soup: BeautifulSoup, html: str) -> dict[str, list[str]]:
         "option_images": dedupe_urls(option),
         "videos": dedupe_urls(videos),
     }
-

@@ -63,7 +63,9 @@ async def analyze_1688_product_url(url: str, provider: str | None = None) -> dic
     try:
         return jsonable(await analyze_product_url(url, provider_name=provider))
     except ValueError as exc:
-        return error_payload("invalid_offer_id", str(exc))
+        if "offer_id" in str(exc) or "1688 offer" in str(exc):
+            return error_payload("invalid_offer_id", str(exc))
+        return error_payload("command_failed", str(exc))
 
 
 @mcp.tool()

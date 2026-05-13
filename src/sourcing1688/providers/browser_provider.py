@@ -232,7 +232,27 @@ class Browser1688Provider(Base1688Provider):
             if status:
                 suggested_action = "Complete the login or verification manually in the browser profile, then retry. No bypass is attempted."
                 return DetailResponse(status=status, message=message, needs_human_action=True, suggested_action=suggested_action, error=structured_error(status, message or status, needs_human_action=True, suggested_action=suggested_action), provider=self.name, provider_version=self.provider_version, source_type="browser", live_verified=False, raw_reference_path=str(snapshot_path))
-            parsed = parse_rendered_html(html, source_path=snapshot_path)
+            try:
+                parsed = parse_rendered_html(html, source_path=snapshot_path)
+            except Exception as exc:  # noqa: BLE001
+                message = "Rendered HTML parser failed while extracting product detail."
+                return DetailResponse(
+                    status="partial_data",
+                    message=message,
+                    needs_human_action=False,
+                    suggested_action="Use the saved raw_reference_path HTML for parser debugging, then retry after updating the parser.",
+                    error=structured_error(
+                        "parser_error",
+                        f"{message} {exc}",
+                        details={"raw_reference_path": str(snapshot_path), "exception_type": type(exc).__name__},
+                    ),
+                    provider=self.name,
+                    provider_version=self.provider_version,
+                    source_type="browser",
+                    live_verified=False,
+                    raw_reference_path=str(snapshot_path),
+                    warnings=["Browser detail HTML was saved, but parser extraction failed."],
+                )
             if parsed.item:
                 parsed.item.provider = self.name
                 parsed.item.provider_version = self.provider_version
