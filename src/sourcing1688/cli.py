@@ -12,6 +12,7 @@ import typer
 from sourcing1688.auth import auth_status, build_authorization_url, clear_token_cache, exchange_code_for_token
 from sourcing1688.assets.manifest import write_manifest
 from sourcing1688.browser_profile import open_browser_profile
+from sourcing1688.codex_install import install_codex, uninstall_codex
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.parsers.rendered_html import parse_rendered_html_file
@@ -133,6 +134,36 @@ def uninstall_command(
         typer.echo(dumps_json(payload))
         if exit_code:
             raise typer.Exit(exit_code)
+
+
+@app.command("install-codex")
+def install_codex_command(
+    open_chrome_setup: Annotated[
+        bool,
+        typer.Option("--open-chrome-setup/--no-open-chrome-setup", help="Open Chrome DevTools setup page after registering MCP servers."),
+    ] = True,
+    json_output: JsonOption = False,
+) -> None:
+    payload = install_codex(open_chrome_setup=open_chrome_setup)
+    exit_code = 1 if payload.get("status") == "error" else 0
+    if json_output:
+        _echo_json(payload, exit_code=exit_code)
+    else:
+        typer.echo(dumps_json(payload))
+        if exit_code:
+            raise typer.Exit(exit_code)
+
+
+@app.command("uninstall-codex")
+def uninstall_codex_command(
+    remove_runtime: Annotated[bool, typer.Option("--remove-runtime", help="Also delete SOURCING1688_HOME runtime data.")] = False,
+    json_output: JsonOption = False,
+) -> None:
+    payload = uninstall_codex(remove_runtime=remove_runtime)
+    if json_output:
+        _echo_json(payload)
+    else:
+        typer.echo(dumps_json(payload))
 
 
 @app.command("setup")

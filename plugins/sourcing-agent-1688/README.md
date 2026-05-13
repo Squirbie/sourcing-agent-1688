@@ -1,12 +1,17 @@
 # 1688 Sourcing Agent
 
-Codex Desktop plugin for 1688 sourcing.
+Codex Desktop에서 Chrome에 열린 1688 상품 페이지를 함께 보고 분석하는 소싱 에이전트입니다.
 
-It installs:
+권장 설치 명령:
 
-- `chrome-devtools` MCP for live Chrome page, DOM, network, screenshot, and JS inspection.
-- `sourcing1688` MCP for 1688 product parsing, asset manifests, scoring, and reports.
+```powershell
+uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 install-codex
+```
 
-Use `@sourcing-agent-1688` in a Codex chat after installation.
+설치 후 Codex Desktop을 다시 켜고 새 채팅에서 `@sourcing-agent-1688`를 선택하세요.
 
-If Chrome DevTools cannot connect on first run, call `open_chrome_devtools_setup`, allow the Chrome connection, then continue in a new chat.
+포함 항목:
+
+- `sourcing1688` MCP 서버
+- `chrome-devtools` MCP 서버
+- 1688 Sourcing Agent Skill

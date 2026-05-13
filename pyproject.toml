@@ -24,7 +24,7 @@ dev = [
 
 [project.scripts]
 sourcing1688 = "sourcing1688.cli:main"
-sourcing-agent-1688 = "sourcing1688.cli:app"
+sourcing-agent-1688 = "sourcing1688.cli:main"
 sourcing1688-mcp = "sourcing1688.mcp_server:main"
 
 [build-system]

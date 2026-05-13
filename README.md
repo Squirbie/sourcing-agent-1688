@@ -1,42 +1,51 @@
 # 1688 Sourcing Agent
 
-Codex Desktop에서 `@sourcing-agent-1688`로 1688 상품 페이지를 보고 분석하는 플러그인입니다.
+Codex Desktop에서 `@sourcing-agent-1688`로 1688 상품 페이지를 보고 분석하는 소싱 에이전트입니다.
 
-핵심은 단순 HTML 저장이 아니라 **사용자가 보고 있는 Chrome 탭의 화면, DOM, 네트워크 응답을 Codex가 함께 읽는 것**입니다.
+사용자가 Chrome에서 보고 있는 1688 페이지의 화면, DOM, 네트워크 응답을 Codex가 함께 읽어서 상품 정보, 판매자 정보, 이미지, 영상 후보, 상세 자료를 정리합니다.
 
 ## 설치
 
-Codex Desktop 플러그인 화면에 이 repo를 추가합니다.
+아래 명령 하나만 실행하세요.
 
-```text
-https://github.com/Squirbie/sourcing-agent-1688
+```powershell
+uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 install-codex
 ```
 
-설치 후 새 채팅에서 `@sourcing-agent-1688`를 선택합니다.
+이 명령이 하는 일:
+
+- Codex marketplace 등록
+- `1688 Sourcing Agent` 플러그인 활성화
+- `sourcing1688` MCP 서버 등록
+- `chrome-devtools` MCP 서버 등록
+- Chrome DevTools 연결 설정 페이지 열기
+
+설치가 끝나면 Codex Desktop을 완전히 종료한 뒤 다시 켜고, 새 채팅에서 `@sourcing-agent-1688`를 선택하면 됩니다.
 
 ## 처음 한 번: Chrome 연결
 
-Chrome DevTools 연결이 준비되지 않았으면 에이전트에게 이렇게 말합니다.
+설치 명령이 Chrome 연결 설정 페이지를 엽니다.
+
+Chrome에서 연결을 허용한 뒤, 같은 Chrome 프로필로 1688 상품 페이지나 검색 페이지를 직접 열어두세요. 그 다음 Codex에서 `@sourcing-agent-1688`를 호출하면 됩니다.
+
+필요하면 나중에 다시 열 수 있습니다.
 
 ```text
 @sourcing-agent-1688 Chrome DevTools 연결 세팅 열어줘.
 ```
 
-플러그인이 Chrome 개발자 연결 설정 페이지를 엽니다. Chrome에서 연결을 허용한 뒤, 같은 Chrome 프로필에서 1688 상품 페이지를 직접 열어두고 다시 요청하면 됩니다.
-
 ## 이렇게 쓰면 됩니다
 
 ```text
-@sourcing-agent-1688 이 1688 상품 셀러 입장에서 분석해줘:
-https://detail.1688.com/offer/123456789.html
+@sourcing-agent-1688 지금 Chrome에 열어둔 1688 상품을 셀러 입장에서 분석해줘.
 ```
 
 ```text
-@sourcing-agent-1688 지금 Chrome에 열어둔 1688 상품 페이지 이미지, 옵션, 판매자 정보, 영상 자료 확인해줘.
+@sourcing-agent-1688 이 상품의 이미지, 옵션, 판매자 정보, 영상 자료 확인해줘.
 ```
 
 ```text
-@sourcing-agent-1688 스마트폰 거치대 소싱 후보를 1688에서 찾아보고 비교해줘.
+@sourcing-agent-1688 1688에서 스마트폰 거치대 소싱 후보 찾아보고 비교해줘.
 ```
 
 ```text
@@ -65,10 +74,14 @@ https://detail.1688.com/offer/123456789.html
 
 ## 삭제
 
-Codex Desktop 플러그인 화면에서 제거합니다.
-
-로컬 저장 데이터까지 지우려면:
+Codex 설정과 MCP 등록을 한 번에 지우려면:
 
 ```powershell
-sourcing1688 uninstall --yes
+uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 uninstall-codex
+```
+
+저장 데이터까지 같이 지우려면:
+
+```powershell
+uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 uninstall-codex --remove-runtime
 ```
