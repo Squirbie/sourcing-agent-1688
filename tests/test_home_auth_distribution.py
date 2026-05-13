@@ -165,6 +165,7 @@ def test_distribution_files_are_portable_and_documented():
     assert marketplace["plugins"][0]["name"] == "sourcing-agent-1688"
     assert marketplace["plugins"][0]["source"]["source"] == "local"
     assert marketplace["plugins"][0]["source"]["path"] == "./plugins/sourcing-agent-1688"
+    assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert marketplace["plugins"][0]["policy"]["authentication"] == "ON_INSTALL"
     assert (bundle_root / "README.md").exists()
     assert (bundle_root / "skills" / "sourcing-agent-1688" / "SKILL.md").exists()

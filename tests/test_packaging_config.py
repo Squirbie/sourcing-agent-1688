@@ -39,6 +39,7 @@ def test_bundled_codex_plugin_layout_is_explicit():
         "source": "local",
         "path": "./plugins/sourcing-agent-1688",
     }
+    assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert marketplace["plugins"][0]["policy"]["authentication"] == "ON_INSTALL"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["mcpServers"] == "./.mcp.codex.json"
