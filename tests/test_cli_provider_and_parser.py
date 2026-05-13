@@ -26,6 +26,8 @@ def test_provider_check_mock_json():
     assert result.exit_code == 0
     assert payload["status"] == "ok"
     assert payload["provider"] == "mock"
+    assert payload["ready"] is True
+    assert payload["live_verified"] is False
     assert payload["capabilities"]["search"] is True
 
 

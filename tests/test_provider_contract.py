@@ -28,9 +28,14 @@ async def test_mock_provider_returns_fixture_search_and_detail():
     hot = await provider.get_hot_keywords(limit=2)
 
     assert search.status == "ok"
+    assert search.live_verified is False
+    assert search.items[0].live_verified is False
     assert search.items[0].offer_id == "123456789"
     assert detail.status == "ok"
+    assert detail.live_verified is False
     assert detail.item.offer_id == "123456789"
+    assert detail.item.live_verified is False
+    assert hot.live_verified is False
     assert len(hot.items) == 2
 
 

@@ -47,14 +47,14 @@ class Mock1688Provider(Base1688Provider):
             provider=self.name,
             provider_version=self.provider_version,
             source_type="mock",
-            live_verified=True,
+            live_verified=False,
             search=True,
             detail=True,
             download_assets=True,
             hot_keywords=True,
             rankings=True,
             image_search=True,
-            notes=["Fixture-backed provider for deterministic development and tests."],
+            notes=["Fixture-backed sample data for deterministic development, tests, and demos. It is not live 1688 data."],
         )
 
     async def search_products(
@@ -66,10 +66,10 @@ class Mock1688Provider(Base1688Provider):
         filters: dict[str, Any] | None = None,
     ) -> SearchResponse:
         data = self._read_json("search_result_sample.json")
-        metadata = {"provider": self.name, "provider_version": self.provider_version, "source_type": "mock", "live_verified": True}
+        metadata = {"provider": self.name, "provider_version": self.provider_version, "source_type": "mock", "live_verified": False}
         items = [ProductSearchResult.model_validate(item | {"source_keyword": keyword} | metadata) for item in data["items"]]
         start = max(page - 1, 0) * page_size
-        return SearchResponse(status="ok", items=items[start : start + page_size], keyword=keyword, provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=True)
+        return SearchResponse(status="ok", items=items[start : start + page_size], keyword=keyword, provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=False)
 
     async def get_product_detail(self, offer_id_or_url: str) -> DetailResponse:
         try:
@@ -84,8 +84,8 @@ class Mock1688Provider(Base1688Provider):
         data = self._read_json("product_detail_sample.json")
         data["offer_id"] = offer_id
         data["url"] = f"https://detail.1688.com/offer/{offer_id}.html"
-        detail = ProductDetail.model_validate(data | {"provider": self.name, "provider_version": self.provider_version, "source_type": "mock", "live_verified": True})
-        return DetailResponse(status="ok", item=detail, provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=True)
+        detail = ProductDetail.model_validate(data | {"provider": self.name, "provider_version": self.provider_version, "source_type": "mock", "live_verified": False})
+        return DetailResponse(status="ok", item=detail, provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=False)
 
     async def download_product_assets(
         self,
@@ -115,14 +115,14 @@ class Mock1688Provider(Base1688Provider):
                 html=self._read_text("product_detail_sample.html"),
                 dry_run=dry_run,
             )
-        return AssetDownloadResponse(status=manifest.status, manifest=manifest, manifest_path=str(Path(manifest.saved_dir) / "manifest.json"), provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=True)
+        return AssetDownloadResponse(status=manifest.status, manifest=manifest, manifest_path=str(Path(manifest.saved_dir) / "manifest.json"), provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=False)
 
     async def get_hot_keywords(self, category_id: str | None = None, limit: int = 20) -> HotKeywordsResponse:
         data = self._read_json("ranking_sample.json")
         items = [HotKeyword.model_validate(item) for item in data["hot_keywords"]]
         if category_id:
             items = [item for item in items if item.category_id == category_id]
-        return HotKeywordsResponse(status="ok", items=items[:limit], provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=True)
+        return HotKeywordsResponse(status="ok", items=items[:limit], provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=False)
 
     async def get_rankings(
         self,
@@ -132,9 +132,9 @@ class Mock1688Provider(Base1688Provider):
     ) -> RankingsResponse:
         data = self._read_json("ranking_sample.json")
         items = [RankingItem.model_validate(item) for item in data["rankings"]]
-        return RankingsResponse(status="ok", items=items[:limit], provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=True, message=f"mock {rank_type} rankings")
+        return RankingsResponse(status="ok", items=items[:limit], provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=False, message=f"mock {rank_type} rankings")
 
     async def image_search(self, image_url: str | None = None, image_path: str | None = None, page: int = 1, page_size: int = 20) -> ImageSearchResponse:
         data = self._read_json("image_search_sample.json")
-        items = [ProductSearchResult.model_validate(item | {"provider": self.name, "provider_version": self.provider_version, "source_type": "mock", "live_verified": True}) for item in data["items"]]
-        return ImageSearchResponse(status="ok", items=items[:page_size], image_url=image_url, image_path=image_path, provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=True)
+        items = [ProductSearchResult.model_validate(item | {"provider": self.name, "provider_version": self.provider_version, "source_type": "mock", "live_verified": False}) for item in data["items"]]
+        return ImageSearchResponse(status="ok", items=items[:page_size], image_url=image_url, image_path=image_path, provider=self.name, provider_version=self.provider_version, source_type="mock", live_verified=False)
