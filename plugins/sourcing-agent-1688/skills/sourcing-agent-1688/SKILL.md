@@ -43,7 +43,7 @@ When the user gives a 1688 product URL or asks about the current Chrome page:
 When the user asks for sourcing candidates:
 
 1. Call `expand_sourcing_keywords`.
-2. Use Chrome DevTools to search 1688 with the Chinese keywords.
+2. Use Chrome DevTools to search 1688 with the Chinese keywords. For `s.1688.com` search URLs, GBK-percent-encode Chinese keywords; UTF-8 encoded Chinese keywords can render as broken text and return unrelated results.
 3. Inspect visible results and network responses.
 4. Compare candidates using price, MOQ if visible, seller signals, assets, and page quality.
 
