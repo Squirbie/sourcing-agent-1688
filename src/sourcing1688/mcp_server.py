@@ -241,7 +241,7 @@ def open_chrome_devtools_setup() -> dict[str, Any]:
     """Open Chrome pages needed for first-run DevTools MCP auto-connect setup."""
     try:
         command = chrome_devtools_setup_command()
-        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
     except Exception as exc:  # noqa: BLE001
         return error_payload(
             "chrome_devtools_setup_failed",
@@ -253,6 +253,8 @@ def open_chrome_devtools_setup() -> dict[str, Any]:
         "status": "ok",
         "opened": [CHROME_DEVTOOLS_SETUP_URL],
         "command": command,
+        "returncode": completed.returncode,
+        "stderr": completed.stderr.strip(),
         "next_steps": [
             "In Chrome, allow or start the local DevTools debugging connection if prompted.",
             "Then open the target 1688 page yourself in the same Chrome profile.",

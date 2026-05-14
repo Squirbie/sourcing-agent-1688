@@ -152,10 +152,18 @@ def _clear_plugin_cache(home: Path) -> dict[str, Any]:
 def _open_chrome_setup_page() -> dict[str, Any]:
     command = chrome_devtools_setup_command()
     try:
-        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
     except FileNotFoundError as exc:
         return {"url": CHROME_DEVTOOLS_SETUP_URL, "command": command, "ok": False, "error": str(exc)}
-    return {"url": CHROME_DEVTOOLS_SETUP_URL, "command": command, "ok": True, "pid": process.pid}
+    except subprocess.TimeoutExpired as exc:
+        return {"url": CHROME_DEVTOOLS_SETUP_URL, "command": command, "ok": False, "error": f"Timed out after {exc.timeout} seconds."}
+    return {
+        "url": CHROME_DEVTOOLS_SETUP_URL,
+        "command": command,
+        "ok": completed.returncode == 0,
+        "returncode": completed.returncode,
+        "stderr": completed.stderr.strip(),
+    }
 
 
 def _add_sourcing_mcp() -> list[dict[str, Any]]:

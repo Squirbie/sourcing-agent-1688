@@ -45,15 +45,20 @@ def test_mcp_server_registers_expected_tools():
 def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch):
     calls = []
 
-    class MockPopen:
-        def __init__(self, args, stdout=None, stderr=None):
-            calls.append(args)
+    class MockCompleted:
+        returncode = 0
+        stderr = ""
 
-    monkeypatch.setattr(mcp_server.subprocess, "Popen", MockPopen)
+    def mock_run(args, **kwargs):
+        calls.append(args)
+        return MockCompleted()
+
+    monkeypatch.setattr(mcp_server.subprocess, "run", mock_run)
     monkeypatch.setattr(mcp_server.sys, "platform", "win32")
 
     payload = mcp_server.open_chrome_devtools_setup()
 
     assert payload["status"] == "ok"
+    assert payload["returncode"] == 0
     assert any("chrome://inspect/#remote-debugging" in " ".join(call) for call in calls)
     assert not any("https://www.1688.com" in " ".join(call) for call in calls)
