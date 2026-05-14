@@ -22,6 +22,8 @@ def test_root_codex_plugin_manifest_points_to_root_mcp_json():
     assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert mcp["mcpServers"]["chrome-devtools"]["startup_timeout_sec"] == 60
+    assert mcp["mcpServers"]["chrome-devtools"]["tool_timeout_sec"] == 300
 
 
 def test_codex_marketplace_points_to_bundled_plugin_layout():
@@ -48,6 +50,8 @@ def test_codex_marketplace_points_to_bundled_plugin_layout():
     assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert mcp["mcpServers"]["chrome-devtools"]["startup_timeout_sec"] == 60
+    assert mcp["mcpServers"]["chrome-devtools"]["tool_timeout_sec"] == 300
 
 
 def test_removed_cross_platform_layouts_are_absent():

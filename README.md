@@ -28,6 +28,8 @@ uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agen
 
 Chrome에서 연결을 허용한 뒤, 같은 Chrome 프로필로 1688 상품 페이지나 검색 페이지를 직접 열어두세요. 그 다음 Codex에서 `@sourcing-agent-1688`를 호출하면 됩니다.
 
+첫 연결에서 Chrome이 원격 디버깅 허용창을 띄울 수 있습니다. 이때 바로 실패로 판단하지 말고 `Allow`를 누른 뒤 같은 요청을 다시 실행하면 됩니다. 플러그인 MCP 설정은 이 첫 허용을 기다릴 수 있게 Chrome DevTools 호출 시간을 길게 잡아둡니다.
+
 필요하면 나중에 다시 열 수 있습니다.
 
 ```text

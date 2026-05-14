@@ -26,6 +26,8 @@ If Chrome DevTools cannot connect, has no pages, or reports `DevToolsActivePort`
 4. Ask the user to open the target 1688 page in that same Chrome profile.
 5. Stop there until the user confirms setup is done or provides the target page.
 
+If a Chrome DevTools tool call times out during first connection, do not call it a parser bug or a 1688 failure. Treat it as a pending Chrome permission dialog, tell the user to click Allow if the dialog is visible, then retry the same Chrome DevTools call after the user confirms. The bundled MCP config gives Chrome DevTools a long tool timeout so the user has time to notice and approve the prompt.
+
 ## Product Page
 
 When the user gives a 1688 product URL or asks about the current Chrome page:
