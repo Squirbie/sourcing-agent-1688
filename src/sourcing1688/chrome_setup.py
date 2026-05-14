@@ -58,8 +58,7 @@ def _windows_focus_chrome_setup_script(chrome_command: str) -> str:
             "Start-Sleep -Milliseconds 1000",
             "Add-Type -AssemblyName UIAutomationClient",
             "Add-Type -AssemblyName UIAutomationTypes",
-            "Add-Type -AssemblyName System.Windows.Forms",
-            "Add-Type 'using System; using System.Runtime.InteropServices; public class S1688Win32 { [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport(\"user32.dll\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); }'",
+            "Add-Type 'using System; using System.Runtime.InteropServices; public class S1688Win32 { [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport(\"user32.dll\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\"user32.dll\")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo); }'",
             "$proc = Get-Process chrome | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1",
             "[S1688Win32]::ShowWindowAsync($proc.MainWindowHandle, 9) | Out-Null",
             "[S1688Win32]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null",
@@ -70,6 +69,8 @@ def _windows_focus_chrome_setup_script(chrome_command: str) -> str:
             "$valuePattern = $addressBar.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)",
             "$valuePattern.SetValue($url)",
             "Start-Sleep -Milliseconds 200",
-            "[System.Windows.Forms.SendKeys]::SendWait('{ENTER}')",
+            "[S1688Win32]::keybd_event(0x0D, 0, 0, [UIntPtr]::Zero)",
+            "Start-Sleep -Milliseconds 50",
+            "[S1688Win32]::keybd_event(0x0D, 0, 2, [UIntPtr]::Zero)",
         ]
     )

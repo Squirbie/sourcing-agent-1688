@@ -18,7 +18,7 @@ def test_windows_chrome_setup_uses_chrome_exe_directly(monkeypatch, tmp_path):
     assert "UIAutomationClient" in command[-1]
     assert "ValuePattern" in command[-1]
     assert "about:blank" in command[-1]
-    assert "SendKeys" in command[-1]
+    assert "keybd_event" in command[-1]
     assert "cmd" not in command
 
 
