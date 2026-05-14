@@ -55,5 +55,5 @@ def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch):
     payload = mcp_server.open_chrome_devtools_setup()
 
     assert payload["status"] == "ok"
-    assert any("chrome://inspect/#remote-debugging" in call for call in calls)
-    assert not any("https://www.1688.com" in call for call in calls)
+    assert any("chrome://inspect/#remote-debugging" in " ".join(call) for call in calls)
+    assert not any("https://www.1688.com" in " ".join(call) for call in calls)
