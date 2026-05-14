@@ -4,7 +4,6 @@ import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote_plus
 
 from sourcing1688.assets.downloader import download_assets
 from sourcing1688.config import Settings, get_settings
@@ -22,7 +21,7 @@ from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_rendered_ht
 from sourcing1688.providers.base import Base1688Provider
 from sourcing1688.providers.selectors import BROWSER_SELECTORS
 from sourcing1688.state import runtime_paths
-from sourcing1688.utils import extract_offer_id, structured_error
+from sourcing1688.utils import encode_1688_search_keyword, extract_offer_id, structured_error
 
 
 PROVIDER_VERSION = "0.2.0"
@@ -161,7 +160,8 @@ class Browser1688Provider(Base1688Provider):
     ) -> SearchResponse:
         if not self.settings.browser_profile:
             return self._profile_missing(SearchResponse)
-        browser_state, error = await self._with_page(f"https://s.1688.com/selloffer/offer_search.htm?keywords={quote_plus(keyword)}&beginPage={page}")
+        encoded_keyword = encode_1688_search_keyword(keyword)
+        browser_state, error = await self._with_page(f"https://s.1688.com/selloffer/offer_search.htm?keywords={encoded_keyword}&beginPage={page}")
         if error:
             return self._profile_missing(SearchResponse)
         playwright, context, page_obj, url = browser_state

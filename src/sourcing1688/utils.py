@@ -5,6 +5,7 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote_from_bytes, quote_plus
 
 from pydantic import BaseModel
 
@@ -51,6 +52,15 @@ def extract_offer_id(value: str) -> str:
         return match.group("offer_id")
 
     raise ValueError(f"Could not extract 1688 offer_id from: {value}")
+
+
+def encode_1688_search_keyword(keyword: str) -> str:
+    """Encode search keywords the way the 1688 search page expects."""
+    normalized = keyword.strip()
+    try:
+        return quote_from_bytes(normalized.encode("gbk"))
+    except UnicodeEncodeError:
+        return quote_plus(normalized)
 
 
 def sanitize_filename(value: str, max_length: int = 120) -> str:
