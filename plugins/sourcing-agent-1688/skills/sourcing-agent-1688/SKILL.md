@@ -14,15 +14,17 @@ Primary path:
 3. Use `sourcing1688` tools to normalize 1688 HTML and network JSON into seller-facing product data.
 
 Use Chrome DevTools first. Do not open a separate window unless the user explicitly asks.
+Do not run synthetic fixture, demo, or parser self-tests during a user sourcing task.
 
 ## First-Run Chrome Setup
 
 If Chrome DevTools cannot connect, has no pages, or reports `DevToolsActivePort`:
 
 1. Call `open_chrome_devtools_setup`.
-2. Ask the user to allow the Chrome DevTools connection in the opened Chrome settings page.
-3. Ask the user to open the target 1688 page in that same Chrome profile.
-4. Continue in a new chat if the MCP server failed before setup.
+2. Tell the user that the Chrome setup tab was opened.
+3. Ask the user to allow the Chrome DevTools connection in the opened Chrome settings page.
+4. Ask the user to open the target 1688 page in that same Chrome profile.
+5. Stop there until the user confirms setup is done or provides the target page.
 
 ## Product Page
 

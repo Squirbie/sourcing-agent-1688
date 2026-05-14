@@ -12,7 +12,7 @@ def test_windows_chrome_setup_uses_chrome_exe_directly(monkeypatch, tmp_path):
 
     command = chrome_setup.chrome_devtools_setup_command()
 
-    assert command == [str(chrome), chrome_setup.CHROME_DEVTOOLS_SETUP_URL]
+    assert command == [str(chrome), "--new-tab", chrome_setup.CHROME_DEVTOOLS_SETUP_URL]
     assert "cmd" not in command
     assert "start" not in command
 
@@ -24,7 +24,7 @@ def test_windows_chrome_setup_falls_back_without_shell_start(monkeypatch):
 
     command = chrome_setup.chrome_devtools_setup_command()
 
-    assert command == ["chrome.exe", chrome_setup.CHROME_DEVTOOLS_SETUP_URL]
+    assert command == ["chrome.exe", "--new-tab", chrome_setup.CHROME_DEVTOOLS_SETUP_URL]
 
 
 def test_macos_chrome_setup_uses_open_app(monkeypatch):
@@ -41,4 +41,4 @@ def test_linux_chrome_setup_uses_chrome_command(monkeypatch):
 
     command = chrome_setup.chrome_devtools_setup_command()
 
-    assert command == ["google-chrome", chrome_setup.CHROME_DEVTOOLS_SETUP_URL]
+    assert command == ["google-chrome", "--new-tab", chrome_setup.CHROME_DEVTOOLS_SETUP_URL]

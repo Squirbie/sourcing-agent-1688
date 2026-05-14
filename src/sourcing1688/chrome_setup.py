@@ -34,9 +34,9 @@ def chrome_devtools_setup_command() -> list[str]:
     if sys.platform.startswith("win"):
         chrome = find_chrome_executable()
         if chrome:
-            return [chrome, CHROME_DEVTOOLS_SETUP_URL]
-        return ["chrome.exe", CHROME_DEVTOOLS_SETUP_URL]
+            return [chrome, "--new-tab", CHROME_DEVTOOLS_SETUP_URL]
+        return ["chrome.exe", "--new-tab", CHROME_DEVTOOLS_SETUP_URL]
     if sys.platform == "darwin":
         return ["open", "-a", "Google Chrome", CHROME_DEVTOOLS_SETUP_URL]
     chrome = find_chrome_executable() or "google-chrome"
-    return [chrome, CHROME_DEVTOOLS_SETUP_URL]
+    return [chrome, "--new-tab", CHROME_DEVTOOLS_SETUP_URL]
