@@ -11,6 +11,8 @@ from sourcing1688.utils import encode_1688_search_keyword, extract_offer_id
         ("detail.1688.com/offer/123456789.html", "123456789"),
         ("123456789", "123456789"),
         ("https://m.1688.com/offer/123456789.html?spm=a2615", "123456789"),
+        ("http://detail.m.1688.com/page/index.html?offerId=812305105474&skuId=5505516668292", "812305105474"),
+        ("https://s.1688.com/selloffer/similar_search.html?offerIds=843851306548", "843851306548"),
     ],
 )
 def test_extract_offer_id(value, expected):

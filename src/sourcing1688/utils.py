@@ -51,6 +51,10 @@ def extract_offer_id(value: str) -> str:
     if match:
         return match.group("offer_id")
 
+    query_match = re.search(r"(?:offerId|offerIds|offer_id)=(?P<offer_id>\d{6,})", value, flags=re.IGNORECASE)
+    if query_match:
+        return query_match.group("offer_id")
+
     raise ValueError(f"Could not extract 1688 offer_id from: {value}")
 
 

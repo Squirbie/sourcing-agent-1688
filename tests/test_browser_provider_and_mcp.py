@@ -27,6 +27,25 @@ def test_browser_search_dom_parser_fixture():
     assert items[0].source_keyword == "黑胶伞"
 
 
+def test_browser_search_dom_parser_handles_mobile_offer_links():
+    html = """
+    <html><body>
+      <a href="http://detail.m.1688.com/page/index.html?offerId=812305105474&skuId=5505516668292">
+        抖音款金属直播手机支架 10万+件 回头率55%
+        <img src="//cbu01.alicdn.com/img/ibank/O1CN015ws3s41zgo2Mv28yO_!!2216935376744-0-cib.jpg">
+      </a>
+      <a href="https://s.1688.com/selloffer/similar_search.html?offerIds=812305105474">找相似</a>
+    </body></html>
+    """
+    provider = Browser1688Provider()
+
+    items = provider._parse_search_dom(html, "\u624b\u673a\u652f\u67b6", 5)
+
+    assert len(items) == 1
+    assert items[0].offer_id == "812305105474"
+    assert items[0].image_url == "https://cbu01.alicdn.com/img/ibank/O1CN015ws3s41zgo2Mv28yO_!!2216935376744-0-cib.jpg"
+
+
 def test_mcp_server_registers_expected_tools():
     tool_names = {tool.name for tool in mcp._tool_manager.list_tools()}
 

@@ -188,14 +188,18 @@ class Browser1688Provider(Base1688Provider):
 
         soup = BeautifulSoup(html, "html.parser")
         items: list[ProductSearchResult] = []
+        seen_offer_ids: set[str] = set()
         for anchor in soup.find_all("a", href=True):
             href = str(anchor["href"])
-            if "detail.1688.com/offer/" not in href:
+            if "offer" not in href.lower():
                 continue
             try:
                 offer_id = extract_offer_id(href)
             except ValueError:
                 continue
+            if offer_id in seen_offer_ids:
+                continue
+            seen_offer_ids.add(offer_id)
             title = anchor.get_text(" ", strip=True) or anchor.get("title") or f"1688 offer {offer_id}"
             image = None
             parent = anchor.parent
