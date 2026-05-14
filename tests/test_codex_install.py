@@ -21,7 +21,7 @@ def write_marketplace_bundle(home: Path) -> None:
     plugin_dir = home / ".tmp" / "marketplaces" / codex_install.MARKETPLACE_NAME / "plugins" / codex_install.PLUGIN_NAME
     manifest_dir = plugin_dir / ".codex-plugin"
     manifest_dir.mkdir(parents=True)
-    (manifest_dir / "plugin.json").write_text(json.dumps({"version": "0.5.11"}), encoding="utf-8")
+    (manifest_dir / "plugin.json").write_text(json.dumps({"version": "0.5.12"}), encoding="utf-8")
     (plugin_dir / ".mcp.json").write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
     (plugin_dir / "README.md").write_text("# Plugin", encoding="utf-8")
 
@@ -42,7 +42,7 @@ def test_enable_and_disable_plugin_config(tmp_path):
     assert codex_install.PLUGIN_CONFIG_ID not in config.read_text(encoding="utf-8")
 
 
-def test_install_codex_registers_marketplace_plugin_and_mcp(monkeypatch, tmp_path):
+def test_install_codex_registers_marketplace_plugin_and_removes_global_mcp(monkeypatch, tmp_path):
     write_marketplace_bundle(tmp_path)
     commands = []
 
@@ -58,23 +58,23 @@ def test_install_codex_registers_marketplace_plugin_and_mcp(monkeypatch, tmp_pat
     monkeypatch.setenv("CODEX_HOME", str(tmp_path))
     monkeypatch.setattr(codex_install.shutil, "which", fake_which)
     monkeypatch.setattr(codex_install.subprocess, "run", fake_run)
-    monkeypatch.setattr(codex_install.sys, "platform", "win32")
 
     payload = codex_install.install_codex(open_chrome_setup=False)
 
     assert payload["status"] == "ok"
     assert ["codex", "plugin", "marketplace", "add", codex_install.REPO_URL] in commands
-    assert any(command[:4] == ["codex", "mcp", "add", "sourcing1688"] for command in commands)
-    assert any(command[:4] == ["codex", "mcp", "add", "chrome-devtools"] for command in commands)
+    assert ["codex", "mcp", "remove", "sourcing1688"] in commands
+    assert ["codex", "mcp", "remove", "chrome-devtools"] in commands
+    assert not any(command[:3] == ["codex", "mcp", "add"] for command in commands)
     assert codex_install.PLUGIN_CONFIG_ID in (tmp_path / "config.toml").read_text(encoding="utf-8")
-    assert (tmp_path / "plugins" / "cache" / codex_install.MARKETPLACE_NAME / codex_install.PLUGIN_NAME / "0.5.11").exists()
+    assert (tmp_path / "plugins" / "cache" / codex_install.MARKETPLACE_NAME / codex_install.PLUGIN_NAME / "0.5.12").exists()
 
 
 def test_install_codex_cli_json_can_be_mocked(monkeypatch, tmp_path):
     payload = {
         "status": "ok",
         "plugin_id": codex_install.PLUGIN_CONFIG_ID,
-        "mcp_servers": ["sourcing1688", "chrome-devtools"],
+        "mcp_servers": "plugin-bundled",
     }
 
     monkeypatch.setattr("sourcing1688.cli.install_codex", lambda open_chrome_setup=True: payload)
@@ -83,10 +83,10 @@ def test_install_codex_cli_json_can_be_mocked(monkeypatch, tmp_path):
 
     assert result.exit_code == 0
     assert parsed["status"] == "ok"
-    assert parsed["mcp_servers"] == ["sourcing1688", "chrome-devtools"]
+    assert parsed["mcp_servers"] == "plugin-bundled"
 
 
-def test_chrome_mcp_registration_is_platform_specific(monkeypatch):
+def test_global_mcp_cleanup_removes_legacy_servers(monkeypatch):
     commands = []
 
     def fake_run(command, **kwargs):
@@ -94,14 +94,12 @@ def test_chrome_mcp_registration_is_platform_specific(monkeypatch):
         return Completed()
 
     monkeypatch.setattr(codex_install.subprocess, "run", fake_run)
-    monkeypatch.setattr(codex_install.sys, "platform", "darwin")
 
-    codex_install._add_chrome_mcp()
+    codex_install._remove_global_mcp_servers()
 
-    add = [command for command in commands if command[:4] == ["codex", "mcp", "add", "chrome-devtools"]][0]
-    assert "npx" in add
-    assert "cmd" not in add
-    assert "chrome-devtools-mcp@latest" in add
+    assert ["codex", "mcp", "remove", "sourcing1688"] in commands
+    assert ["codex", "mcp", "remove", "chrome-devtools"] in commands
+    assert not any(command[:3] == ["codex", "mcp", "add"] for command in commands)
 
 
 def test_uninstall_codex_cli_json_can_be_mocked(monkeypatch):

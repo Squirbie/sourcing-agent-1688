@@ -4,7 +4,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +11,6 @@ from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools
 
 
 REPO_URL = "https://github.com/Squirbie/sourcing-agent-1688.git"
-GIT_REPO_URL = f"git+{REPO_URL}"
 MARKETPLACE_NAME = "sourcing-agent-1688-marketplace"
 PLUGIN_NAME = "sourcing-agent-1688"
 PLUGIN_CONFIG_ID = f'{PLUGIN_NAME}@{MARKETPLACE_NAME}'
@@ -166,78 +164,11 @@ def _open_chrome_setup_page() -> dict[str, Any]:
     }
 
 
-def _add_sourcing_mcp() -> list[dict[str, Any]]:
-    home = str(sourcing_home()).replace("\\", "/")
+def _remove_global_mcp_servers() -> list[dict[str, Any]]:
     return [
         _run(["codex", "mcp", "remove", SOURCING_MCP_NAME]),
-        _run(
-            [
-                "codex",
-                "mcp",
-                "add",
-                SOURCING_MCP_NAME,
-                "--env",
-                "SOURCING1688_PROVIDER=auto",
-                "--env",
-                f"SOURCING1688_HOME={home}",
-                "--",
-                "uvx",
-                "--refresh",
-                "--from",
-                GIT_REPO_URL,
-                "sourcing1688-mcp",
-            ]
-        ),
+        _run(["codex", "mcp", "remove", CHROME_MCP_NAME]),
     ]
-
-
-def _add_chrome_mcp() -> list[dict[str, Any]]:
-    remove = _run(["codex", "mcp", "remove", CHROME_MCP_NAME])
-    if sys.platform.startswith("win"):
-        add = _run(
-            [
-                "codex",
-                "mcp",
-                "add",
-                CHROME_MCP_NAME,
-                "--env",
-                "SystemRoot=C:\\Windows",
-                "--env",
-                "PROGRAMFILES=C:\\Program Files",
-                "--env",
-                "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS=true",
-                "--",
-                "cmd",
-                "/c",
-                "npx",
-                "-y",
-                "chrome-devtools-mcp@latest",
-                "--auto-connect",
-                "--redact-network-headers",
-                "--no-usage-statistics",
-                "--no-performance-crux",
-            ]
-        )
-    else:
-        add = _run(
-            [
-                "codex",
-                "mcp",
-                "add",
-                CHROME_MCP_NAME,
-                "--env",
-                "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS=true",
-                "--",
-                "npx",
-                "-y",
-                "chrome-devtools-mcp@latest",
-                "--auto-connect",
-                "--redact-network-headers",
-                "--no-usage-statistics",
-                "--no-performance-crux",
-            ]
-        )
-    return [remove, add]
 
 
 def install_codex(*, open_chrome_setup: bool = True) -> dict[str, Any]:
@@ -271,21 +202,19 @@ def install_codex(*, open_chrome_setup: bool = True) -> dict[str, Any]:
 
     steps["plugin_enabled"] = enable_plugin_in_config(config_path)
     steps["plugin_cache"] = _copy_plugin_bundle(home)
-    steps["sourcing_mcp"] = _add_sourcing_mcp()
-    steps["chrome_mcp"] = _add_chrome_mcp()
+    steps["global_mcp_cleanup"] = _remove_global_mcp_servers()
     steps["mcp_list"] = _run(["codex", "mcp", "list"])
     if open_chrome_setup:
         steps["chrome_setup_page"] = _open_chrome_setup_page()
 
-    failed = [name for name in ["sourcing_mcp", "chrome_mcp"] if not steps[name][-1]["ok"]]
-    status = "ok" if not failed else "partial_success"
+    status = "ok"
     return {
         "status": status,
-        "message": "Codex Desktop plugin and MCP servers are installed." if status == "ok" else "Install finished with MCP warnings.",
+        "message": "Codex Desktop plugin is installed. MCP servers are loaded from the plugin bundle.",
         "codex_home": str(home),
         "config_path": str(config_path),
         "plugin_id": PLUGIN_CONFIG_ID,
-        "mcp_servers": [SOURCING_MCP_NAME, CHROME_MCP_NAME],
+        "mcp_servers": "plugin-bundled",
         "steps": steps,
         "next_step": "Restart Codex Desktop, open a new chat, then use @sourcing-agent-1688.",
     }

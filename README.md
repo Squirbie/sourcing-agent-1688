@@ -16,8 +16,8 @@ uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agen
 
 - Codex marketplace 등록
 - `1688 Sourcing Agent` 플러그인 활성화
-- `sourcing1688` MCP 서버 등록
-- `chrome-devtools` MCP 서버 등록
+- 플러그인에 포함된 `sourcing1688`, `chrome-devtools` MCP 구성 설치
+- 예전 설치에서 남은 전역 MCP 등록 정리
 - 현재 OS에 맞는 방식으로 Chrome DevTools 연결 설정 페이지 열기
 
 설치가 끝나면 Codex Desktop을 완전히 종료한 뒤 다시 켜고, 새 채팅에서 `@sourcing-agent-1688`를 선택하면 됩니다.
