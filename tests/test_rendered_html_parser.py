@@ -217,7 +217,7 @@ def test_visible_page_snapshot_prefers_company_name_over_supplier_highlights():
     )
 
     assert result.provider == "chrome_devtools"
-    assert result.provider_version == "0.5.27"
+    assert result.provider_version == "0.5.28"
     assert result.live_verified is True
     assert result.item.seller.name == "浙江华彩箱包有限公司"
     assert result.item.video_urls == ["https://cloud.video.taobao.com/play/u/2684580704/p/2/e/6/t/1/442197115990.mp4"]
@@ -402,7 +402,7 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
 
     assert result.provider == "chrome_devtools"
     assert detail.source_type == "browser"
-    assert result.provider_version == "0.5.27"
+    assert result.provider_version == "0.5.28"
     assert detail.price_tiers[0].price == 25.0
     assert detail.trade_volume == 100
     assert detail.seller.name == "杜老汉（山东）生物科技有限公司"
@@ -411,6 +411,49 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
         "https://img.alicdn.com/imgextra/i1/6000000001270/O1CN01BnFLqn1LFi16CptNf_!!6000000001270-0-tbvideo.jpg",
     ]
     assert detail.video_urls == ["https://cloud.video.taobao.com/play/u/2216180205720/p/2/e/6/t/1/494830060237.mp4"]
+
+
+def test_visible_page_snapshot_promotes_category_stock_and_detail_media():
+    body_text = "\n".join(
+        [
+            "测试旅行收纳袋",
+            "义乌市出行用品有限公司",
+            "¥",
+            "19.90",
+            "2件起批",
+            "库存",
+            "35282件",
+            "商品属性",
+            "产品类别",
+            "旅行袋",
+            "材质",
+            "涤纶",
+            "商品描述",
+        ]
+    )
+
+    result = parse_visible_page_snapshot(
+        source_url="https://detail.1688.com/offer/812345678907.html",
+        title="测试旅行收纳袋 - 阿里巴巴",
+        body_text=body_text,
+        media_urls=[
+            "https://cbu01.alicdn.com/img/ibank/O1CN-main-1.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-main-2.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-main-3.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-main-4.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-main-5.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-main-6.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-detail-1.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN-option_sum.jpg",
+        ],
+    )
+    detail = result.item
+
+    assert detail.category == "旅行袋"
+    assert detail.stock == 35282
+    assert len(detail.main_image_urls) == 6
+    assert detail.detail_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN-detail-1.jpg"]
+    assert detail.option_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN-option_sum.jpg"]
 
 
 def test_rendered_html_parser_merges_extra_json_seller_and_images():

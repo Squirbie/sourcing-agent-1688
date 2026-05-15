@@ -55,12 +55,13 @@ When the user asks for sourcing candidates:
 1. Call `expand_sourcing_keywords`.
 2. Treat returned keywords as seed terms only. They are not a closed dictionary.
 3. If the tool returns `strategy: agent_generate_terms`, or the seed terms look too broad, generate 5-8 practical Chinese 1688 search terms yourself from the user's Korean intent. Do not search a Korean placeholder on 1688.
-4. Use Chrome DevTools to search 1688 with the best Chinese keyword first. For `s.1688.com` search URLs, GBK-percent-encode Chinese keywords; UTF-8 encoded Chinese keywords can render as broken text and return unrelated results.
-5. Inspect visible related searches, product titles, seller category words, and network responses. Use those live signals to refine the next query instead of relying only on the seed list.
-6. Capture at least 10 visible candidate cards unless the user asks for fewer or the page has fewer visible results. Scroll/load more before giving up at 3-5 items.
-7. Capture product card fields with `evaluate_script`: title, URL, price text, sold text, seller/shop name, image URL, and visible badges.
-8. Call `parse_1688_search_results_snapshot` with the captured items. Pass a current or user-provided CNY/KRW rate when available.
-9. Present the result in Korean with a real product explanation, CNY price, estimated KRW price, sold count, seller/shop, why it may be a candidate, and what to check next. Translate/summarize Chinese titles yourself; parser category hints are not final user-facing descriptions.
+4. If no 1688 tab is open, open a new tab in the existing Chrome session to the 1688 search URL for the best Chinese keyword. Do not wait for the user to open 1688 manually when the task is a keyword search.
+5. Use Chrome DevTools to search 1688 with the best Chinese keyword first. For `s.1688.com` search URLs, GBK-percent-encode Chinese keywords; UTF-8 encoded Chinese keywords can render as broken text and return unrelated results.
+6. Inspect visible related searches, product titles, seller category words, and network responses. Use those live signals to refine the next query instead of relying only on the seed list.
+7. Capture at least 10 visible candidate cards unless the user asks for fewer or the page has fewer visible results. Scroll/load more before giving up at 3-5 items.
+8. Capture product card fields with `evaluate_script`: title, URL, price text, sold text, seller/shop name, image URL, and visible badges. If a card URL is a `dj.1688.com` ad redirect, also look for a nearby `detail.1688.com`, `detail.m.1688.com`, or `offerId=` URL in the same card before passing it to the parser.
+9. Call `parse_1688_search_results_snapshot` with the captured items. Pass a current or user-provided CNY/KRW rate when available.
+10. Present the result in Korean with a real product explanation, CNY price, estimated KRW price, sold count, seller/shop, why it may be a candidate, and what to check next. Translate/summarize Chinese titles yourself; parser category hints are not final user-facing descriptions.
 
 ## Save Assets
 

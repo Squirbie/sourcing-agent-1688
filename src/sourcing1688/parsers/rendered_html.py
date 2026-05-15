@@ -350,6 +350,14 @@ def _extract_visible_seller(soup: BeautifulSoup) -> SellerInfo | None:
     return None
 
 
+def _category_from_attributes(attributes: dict[str, object]) -> str | None:
+    for key in ("产品类别", "商品类别", "类目", "叶子类目", "分类"):
+        value = attributes.get(key)
+        if value:
+            return str(value)
+    return None
+
+
 def _extract_category(embedded: dict) -> str | None:
     offer_model = _dict(embedded.get("offerModel"))
     category = embedded.get("category") or embedded.get("leafCategoryName") or offer_model.get("leafCategoryName")
@@ -360,6 +368,17 @@ def _extract_stock(embedded: dict) -> int | None:
     trade_model = _dict(embedded.get("tradeModel"))
     trade_without_promotion = _dict(trade_model.get("tradeWithoutPromotion"))
     return _int(embedded.get("stock") or trade_model.get("canBookedAmount") or trade_without_promotion.get("canBookedAmountOriginal"))
+
+
+def _extract_visible_stock(soup: BeautifulSoup) -> int | None:
+    text = _visible_text(soup)
+    for pattern in [
+        r"(?:库存|可售|现货|剩余)\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个|套|只|箱|包)?",
+        r"([0-9,.]+(?:万)?\+?)\s*(?:件|个|套|只|箱|包)\s*(?:库存|可售|现货)",
+    ]:
+        if match := re.search(pattern, text):
+            return _parse_chinese_count(match.group(1))
+    return None
 
 
 def _extract_trade_volume(embedded: dict) -> int | None:
@@ -550,6 +569,9 @@ def _build_detail_response(
     main_images, detail_images = _promote_main_images(assets["main_images"], assets["detail_images"])
     option_images = dedupe_urls(assets["option_images"] + _extract_option_images(embedded))
     live_verified = _is_live_browser_capture(provider, source_url)
+    attributes = _extract_attributes(soup, embedded)
+    category = _extract_category(embedded) or _category_from_attributes(attributes)
+    stock = _extract_stock(embedded) or _extract_visible_stock(soup)
     detail = ProductDetail(
         offer_id=offer_id,
         url=source_url or f"https://detail.1688.com/offer/{offer_id}.html",
@@ -557,9 +579,9 @@ def _build_detail_response(
         title_ko_optional=embedded.get("subjectTrans") or embedded.get("titleTrans"),
         price_tiers=price_tiers,
         sku_options=_extract_sku_options(embedded),
-        attributes=_extract_attributes(soup, embedded),
-        category=_extract_category(embedded),
-        stock=_extract_stock(embedded),
+        attributes=attributes,
+        category=category,
+        stock=stock,
         month_sold=_int(embedded.get("monthSold")) or _extract_visible_month_sold(soup),
         trade_volume=_extract_trade_volume(embedded) or _extract_visible_trade_volume(soup),
         repurchase_rate=_rate(embedded.get("repurchaseRate")) or _extract_visible_repurchase_rate(soup),
@@ -637,6 +659,7 @@ def parse_visible_page_snapshot(
 ) -> DetailResponse:
     media_tags: list[str] = []
     media_warnings: list[str] = []
+    image_index = 0
     for url in media_urls or []:
         if not _is_expected_1688_media_url(str(url)):
             media_warnings.append(f"Skipped external media URL outside expected 1688/Alibaba hosts: {url}")
@@ -649,7 +672,9 @@ def parse_visible_page_snapshot(
         if path.endswith(VIDEO_EXTENSIONS) or "video" in host:
             media_tags.append(f'<video src="{escaped_url}"></video>')
         else:
-            media_tags.append(f'<img src="{escaped_url}">')
+            asset_type = "option" if "_sum" in lowered else "main" if image_index < 6 else "detail"
+            media_tags.append(f'<img data-asset-type="{asset_type}" src="{escaped_url}">')
+            image_index += 1
     text_nodes = "\n".join(f"<div>{html_escape(line)}</div>" for line in body_text.splitlines() if line.strip())
     html = "\n".join(
         [
