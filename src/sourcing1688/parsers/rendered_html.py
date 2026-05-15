@@ -52,7 +52,7 @@ def _is_1688_source_url(source_url: str | None) -> bool:
     parsed = safe_urlparse(source_url)
     if not parsed:
         return False
-    host = parsed.netloc.lower()
+    host = (parsed.hostname or "").lower()
     return host == "1688.com" or host.endswith(".1688.com")
 
 
@@ -64,7 +64,7 @@ def _is_expected_1688_media_url(url: str) -> bool:
     parsed = safe_urlparse(url)
     if not parsed:
         return False
-    host = parsed.netloc.lower()
+    host = (parsed.hostname or "").lower()
     return (
         host == "1688.com"
         or host.endswith(".1688.com")
@@ -203,9 +203,13 @@ def _extract_visible_price_tiers(soup: BeautifulSoup) -> list[PriceTier]:
     tiers: list[PriceTier] = []
     for line in lines:
         clean = re.sub(r"\s+", " ", line)
-        match = re.search(r"(?:≥|>=)?\s*(\d+)(?:\s*[-~]\s*\d+)?\s*(?:个|件|只|套|箱|包)?\s*¥\s*(\d+(?:\.\d+)?)", clean)
-        if match:
-            tiers.append(PriceTier(min_quantity=int(match.group(1)), price=float(match.group(2))))
+        qty_first = re.search(r"(?:≥|>=)?\s*(\d+)(?:\s*[-~—]\s*\d+)?\s*(?:个|件|只|套|箱|包)?\s*(?:¥|￥)\s*(\d+(?:\.\d+)?)", clean)
+        if qty_first:
+            tiers.append(PriceTier(min_quantity=int(qty_first.group(1)), price=float(qty_first.group(2))))
+            continue
+        price_first = re.search(r"(?:¥|￥)\s*(\d+(?:\.\d+)?)\s*(?:/|每|起)?\s*(?:≥|>=)?\s*(\d+)(?:\s*[-~—]\s*\d+)?\s*(?:个|件|只|套|箱|包)", clean)
+        if price_first:
+            tiers.append(PriceTier(min_quantity=int(price_first.group(2)), price=float(price_first.group(1))))
     if tiers:
         deduped: dict[int, PriceTier] = {}
         for tier in tiers:
@@ -317,11 +321,18 @@ def _extract_visible_seller(soup: BeautifulSoup) -> SellerInfo | None:
             candidates.append((score - abs(len(clean) - 12), clean))
     if candidates:
         candidates.sort(reverse=True)
-        seller = SellerInfo(name=candidates[0][1])
+        seller_name = candidates[0][1]
+        seller_years = None
+        if match := re.search(r"(.+?)\s*(\d+)\s*年$", seller_name):
+            seller_name = match.group(1).strip()
+            seller_years = int(match.group(2))
+        seller = SellerInfo(name=seller_name)
         if match := re.search(r"发货地\s*([^\n]+)", text):
             seller.location = match.group(1).strip()
         if match := re.search(r"(?:诚信通|开店|经营)\s*(\d+)\s*年", text):
             seller.years_active = int(match.group(1))
+        elif seller_years is not None:
+            seller.years_active = seller_years
         badges = []
         for badge in ("实力商家", "诚信通", "源头工厂", "48小时发货", "24小时发货"):
             if badge in text:

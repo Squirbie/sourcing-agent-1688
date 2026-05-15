@@ -217,7 +217,7 @@ def test_visible_page_snapshot_prefers_company_name_over_supplier_highlights():
     )
 
     assert result.provider == "chrome_devtools"
-    assert result.provider_version == "0.5.25"
+    assert result.provider_version == "0.5.26"
     assert result.live_verified is True
     assert result.item.seller.name == "浙江华彩箱包有限公司"
     assert result.item.video_urls == ["https://cloud.video.taobao.com/play/u/2684580704/p/2/e/6/t/1/442197115990.mp4"]
@@ -288,6 +288,49 @@ def test_visible_page_snapshot_extracts_tiers_seller_attributes_and_filters_exte
     assert result.warnings
 
 
+def test_visible_page_snapshot_extracts_price_first_tiers_and_seller_year_suffix():
+    result = parse_visible_page_snapshot(
+        source_url="https://detail.1688.com:443/offer/812345678902.html",
+        title="便携旅行收纳包 - 阿里巴巴",
+        body_text="\n".join(
+            [
+                "便携旅行收纳包",
+                "深圳市某某科技有限公司 5年",
+                "¥3.80 / 2-99个",
+                "¥3.45 / 100-999个",
+                "¥2.98 / ≥1000个",
+                "30天成交 520件",
+            ]
+        ),
+        media_urls=[],
+    )
+
+    detail = result.item
+    assert result.live_verified is True
+    assert [(tier.min_quantity, tier.price) for tier in detail.price_tiers] == [(2, 3.8), (100, 3.45), (1000, 2.98)]
+    assert detail.seller.name == "深圳市某某科技有限公司"
+    assert detail.seller.years_active == 5
+
+
+def test_visible_page_snapshot_extracts_rmb_price_first_tiers():
+    result = parse_visible_page_snapshot(
+        source_url="https://detail.1688.com/offer/812345678903.html",
+        title="旅行配件 - 阿里巴巴",
+        body_text="\n".join(
+            [
+                "旅行配件",
+                "义乌市出行用品有限公司",
+                "￥22.50 1-49件",
+                "￥19.80 50-499件",
+                "￥16.90 ≥500件",
+            ]
+        ),
+        media_urls=[],
+    )
+
+    assert [(tier.min_quantity, tier.price) for tier in result.item.price_tiers] == [(1, 22.5), (50, 19.8), (500, 16.9)]
+
+
 def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
     body_text = "\n".join(
         [
@@ -326,7 +369,7 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
 
     assert result.provider == "chrome_devtools"
     assert detail.source_type == "browser"
-    assert result.provider_version == "0.5.25"
+    assert result.provider_version == "0.5.26"
     assert detail.price_tiers[0].price == 25.0
     assert detail.trade_volume == 100
     assert detail.seller.name == "杜老汉（山东）生物科技有限公司"

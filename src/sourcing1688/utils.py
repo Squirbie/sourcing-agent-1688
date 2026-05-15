@@ -47,7 +47,7 @@ def extract_offer_id(value: str) -> str:
     if re.fullmatch(r"\d{6,}", value):
         return value
 
-    match = re.search(r"(?:https?://)?(?:[^/\s]+\.)?1688\.com/offer/(?P<offer_id>\d{6,})(?:\.html)?", value)
+    match = re.search(r"(?:https?://)?(?:[^/\s]+\.)?1688\.com(?::\d+)?/offer/(?P<offer_id>\d{6,})(?:\.html)?", value)
     if match:
         return match.group("offer_id")
 

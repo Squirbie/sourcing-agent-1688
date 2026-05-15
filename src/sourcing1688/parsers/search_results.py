@@ -60,7 +60,7 @@ def parse_chinese_count(value: str) -> int | None:
     patterns = [
         r"(?:成交|已售|销量|售出|卖出|全网)\D{0,12}?([0-9]+(?:\.[0-9]+)?)(万|千)?\+?\s*件?",
         r"([0-9]+(?:\.[0-9]+)?)(万|千)\+?\s*(?:件|单|人)?",
-        r"(\d+(?:\.\d+)?)",
+        r"(\d+(?:\.\d+)?)\+?\s*(?:件|单|人|个)",
     ]
     match = None
     unit = ""
@@ -82,6 +82,9 @@ def parse_chinese_count(value: str) -> int | None:
 def _extract_price_range(*values: Any) -> tuple[float | None, float | None]:
     text = " ".join(_as_text(value) for value in values if value is not None)
     currency_numbers: list[str] = []
+    for match in re.finditer(r"(\d+(?:\.\d+)?)\s*[-~—]\s*(\d+(?:\.\d+)?)\s*(?:元|块|CNY|RMB)", text, flags=re.IGNORECASE):
+        currency_numbers.append(match.group(1))
+        currency_numbers.append(match.group(2))
     for match in re.finditer(r"(?:¥|￥|CNY|RMB)\s*(\d+(?:\.\d+)?)(?:\s*[-~—]\s*(?:¥|￥)?\s*(\d+(?:\.\d+)?))?", text, flags=re.IGNORECASE):
         currency_numbers.append(match.group(1))
         if match.group(2):
@@ -124,7 +127,7 @@ def _canonical_url(url: str, offer_id: str | None) -> str | None:
 
 def _is_1688_url(url: str) -> bool:
     try:
-        host = urlparse(url).netloc.lower()
+        host = (urlparse(url).hostname or "").lower()
     except ValueError:
         return False
     return host == "1688.com" or host.endswith(".1688.com")
@@ -195,9 +198,9 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
     if not title and not url:
         return None
     offer_id = _as_text(_raw_get(raw, "offer_id", "offerId")) or _extract_offer_id(url)
-    price_text = _as_text(_raw_get(raw, "price_text", "priceText", "price", "price_cny", "priceCny", "价格", "价格文本", "单价"))
+    price_text = _as_text(_raw_get(raw, "price_text", "priceText", "price", "price_cny", "priceCny", "价格", "价格范围", "价格区间", "价格文本", "单价"))
     sold_text = _as_text(_raw_get(raw, "sold_text", "soldText", "sales_text", "salesText", "month_sold_text", "monthSoldText", "trade_text", "tradeText", "成交", "销量", "已售", "月销量"))
-    seller = _as_text(_raw_get(raw, "seller_name", "sellerName", "seller", "shop_name", "shopName", "店铺", "店铺名", "商家", "供应商"))
+    seller = _as_text(_raw_get(raw, "seller_name", "sellerName", "seller", "shop_name", "shopName", "店铺", "店铺名", "卖家", "商家", "供应商"))
     image_url = _as_text(_raw_get(raw, "image_url", "imageUrl", "image", "img", "图片", "图片链接", "主图"))
     raw_text = _as_text(raw.get("raw_text") or raw.get("text") or " ".join(str(value) for value in raw.values() if not isinstance(value, (dict, list))))
     badges = raw.get("badges") if isinstance(raw.get("badges"), list) else []

@@ -188,6 +188,41 @@ def test_search_results_accepts_chinese_keys_and_price_ranges():
     assert item["title_ko_summary"] == "방수 파우치/방수팩 후보"
 
 
+def test_search_results_accepts_yuan_range_alt_keys_and_does_not_parse_rating_as_sales():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "标题": "旅行收纳袋 出差整理包",
+                "链接": "https://detail.1688.com/offer/800000000104.html",
+                "价格范围": "2.90-5.90元",
+                "soldText": "评价 4.6 / 退货率低",
+                "卖家": "义乌市旅行用品有限公司",
+            },
+            {
+                "标题": "户外旅行洗漱包",
+                "链接": "https://detail.1688.com/offer/800000000105.html",
+                "价格范围": "￥22.5 - ￥49.9",
+                "成交": "30天成交 880件",
+                "卖家": "深圳出行用品工厂",
+            },
+        ],
+        cny_krw_rate=200,
+        min_items=2,
+    )
+
+    first, second = payload["items"]
+    assert first["price_cny_min"] == 2.9
+    assert first["price_cny_max"] == 5.9
+    assert first["seller_name"] == "义乌市旅行用品有限公司"
+    assert first["sold_count"] is None
+    assert second["price_cny_min"] == 22.5
+    assert second["price_cny_max"] == 49.9
+    assert second["sold_count"] == 880
+    assert second["seller_name"] == "深圳出行用品工厂"
+
+
 def test_search_results_does_not_treat_repurchase_rate_as_sales_count():
     payload = parse_search_results_snapshot(
         keyword="手机防水袋",
@@ -250,3 +285,19 @@ def test_review_snapshot_filters_ui_markers_and_unverified_source():
     assert payload["capture_status"] == "unverified_source_url"
     assert payload["review_list_status"] == "available"
     assert payload["review_texts"] == ["这家包装很稳，发货也很快，下次还会回购"]
+
+
+def test_review_snapshot_only_verifies_real_1688_hosts():
+    lookalike = parse_review_snapshot(
+        source_url="https://fake1688.com/offer/755178864684.html",
+        body_text="综合评价 4.8 100+条评价",
+    )
+    with_port = parse_review_snapshot(
+        source_url="https://detail.1688.com:443/offer/755178864684.html",
+        body_text="综合评价 4.8 100+条评价",
+    )
+
+    assert lookalike["live_verified"] is False
+    assert lookalike["capture_status"] == "unverified_source_url"
+    assert with_port["live_verified"] is True
+    assert with_port["capture_status"] == "browser_capture_1688_url"

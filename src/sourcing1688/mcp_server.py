@@ -37,7 +37,7 @@ def _is_1688_source_url(source_url: str | None) -> bool:
     if not source_url:
         return False
     try:
-        host = urlparse(source_url).netloc.lower()
+        host = (urlparse(source_url).hostname or "").lower()
     except ValueError:
         return False
     return host == "1688.com" or host.endswith(".1688.com")

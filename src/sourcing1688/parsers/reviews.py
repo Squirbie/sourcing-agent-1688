@@ -162,10 +162,10 @@ def _payload_signal(payload: str) -> dict[str, Any]:
 
 def _is_1688_url(url: str) -> bool:
     try:
-        host = urlparse(url).netloc.lower()
+        host = (urlparse(url).hostname or "").lower()
     except ValueError:
         return False
-    return host.endswith("1688.com") or host.endswith(".1688.com")
+    return host == "1688.com" or host.endswith(".1688.com")
 
 
 def parse_review_snapshot(

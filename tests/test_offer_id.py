@@ -7,6 +7,7 @@ from sourcing1688.utils import encode_1688_search_keyword, extract_offer_id
     ("value", "expected"),
     [
         ("https://detail.1688.com/offer/123456789.html", "123456789"),
+        ("https://detail.1688.com:443/offer/123456789.html", "123456789"),
         ("http://detail.1688.com/offer/123456789.html", "123456789"),
         ("detail.1688.com/offer/123456789.html", "123456789"),
         ("123456789", "123456789"),
