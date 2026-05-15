@@ -26,7 +26,7 @@ from sourcing1688.storage import SourcingStorage
 from sourcing1688.utils import extract_offer_id, structured_error
 
 
-CHROME_DEVTOOLS_ALIASES = {"chrome", "chrome-devtools", "chrome_devtools", "devtools"}
+CHROME_DEVTOOLS_ALIASES = {"1688", "sourcing1688", "sourcing-agent-1688", "chrome", "chrome-devtools", "chrome_devtools", "devtools"}
 
 
 def normalize_provider_name(provider_name: str | None = None) -> str:

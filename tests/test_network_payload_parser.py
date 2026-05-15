@@ -71,7 +71,7 @@ def test_network_payload_parser_accepts_jsonp_wrapper():
     )
 
     assert response.status == "partial_data"
-    assert response.provider_version == "0.5.23"
+    assert response.provider_version == "0.5.24"
     assert response.live_verified is True
     assert response.item.offer_id == "999888777"
     assert response.item.price_tiers[0].price == 12.5
