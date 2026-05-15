@@ -11,6 +11,7 @@ def test_search_results_snapshot_normalizes_candidates_and_krw():
             "sold_text": "已售1.2万+件",
             "seller_name": f"义乌旅行用品工厂{index}",
             "image_url": "https://cbu01.alicdn.com/img/ibank/test.jpg",
+            "raw_text": "退货包运费 先采后付 回头率59% 衣物收纳袋榜第10名",
         }
         for index in range(10)
     ]
@@ -28,7 +29,31 @@ def test_search_results_snapshot_normalizes_candidates_and_krw():
     assert payload["items"][0]["title_ko_summary"] == "여행용 수납/휴대 편의용품"
     assert payload["items"][0]["price_krw_min"] == 1102
     assert payload["items"][0]["sold_count"] == 12000
+    assert payload["items"][0]["repurchase_rate"] == 0.59
+    assert "衣物收纳袋榜第10名" in payload["items"][0]["badges"]
     assert payload["warnings"] == []
+
+
+def test_search_results_snapshot_canonicalizes_mobile_offer_id_links():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "title": "旅行收纳袋六件套",
+                "url": "http://detail.m.1688.com/page/index.html?offerId=787690257525&skuId=123",
+                "price_text": "¥6.2",
+                "raw_text": "回头率70%",
+            }
+        ],
+        cny_krw_rate=190,
+        min_items=1,
+    )
+
+    assert payload["items"][0]["offer_id"] == "787690257525"
+    assert payload["items"][0]["url"] == "https://detail.1688.com/offer/787690257525.html"
+    assert payload["items"][0]["raw_url"].startswith("http://detail.m.1688.com")
+    assert payload["items"][0]["repurchase_rate"] == 0.7
 
 
 def test_search_results_snapshot_warns_when_fewer_than_minimum():

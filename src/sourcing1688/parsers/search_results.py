@@ -69,6 +69,28 @@ def _extract_offer_id(url: str) -> str | None:
     return None
 
 
+def _canonical_url(url: str, offer_id: str | None) -> str | None:
+    if offer_id:
+        return f"https://detail.1688.com/offer/{offer_id}.html"
+    return url or None
+
+
+def _extract_repurchase_rate(*values: Any) -> float | None:
+    text = " ".join(_as_text(value) for value in values if value is not None)
+    match = re.search(r"回头率\s*([0-9]+(?:\.[0-9]+)?)\s*%", text)
+    if not match:
+        return None
+    return float(match.group(1)) / 100
+
+
+def _extract_ranking_badges(*values: Any) -> list[str]:
+    text = " ".join(_as_text(value) for value in values if value is not None)
+    badges = re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+榜第\d+名", text)
+    badges.extend(re.findall(r"比同款低\d+%", text))
+    badges.extend(re.findall(r"退货包运费|先采后付|新人价|首单减\d+元|下单返拿样费", text))
+    return list(dict.fromkeys(badges))
+
+
 def _krw(value: float | None, rate: float) -> int | None:
     return int(round(value * rate)) if value is not None else None
 
@@ -118,14 +140,20 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
     sold_text = _as_text(raw.get("sold_text") or raw.get("sales_text") or raw.get("month_sold_text") or raw.get("trade_text"))
     seller = _as_text(raw.get("seller_name") or raw.get("seller") or raw.get("shop_name"))
     image_url = _as_text(raw.get("image_url") or raw.get("image") or raw.get("img"))
+    raw_text = _as_text(raw.get("raw_text") or raw.get("text") or " ".join(str(value) for value in raw.values() if not isinstance(value, (dict, list))))
     badges = raw.get("badges") if isinstance(raw.get("badges"), list) else []
     badges = [_as_text(badge) for badge in badges if _as_text(badge)]
+    badges = list(dict.fromkeys(badges + _extract_ranking_badges(raw_text, title)))
     price_min, price_max = _extract_price_range(raw.get("price_cny_min"), raw.get("price_cny_max"), price_text)
     sold_count = parse_chinese_count(sold_text)
+    repurchase_rate = raw.get("repurchase_rate")
+    if repurchase_rate is None:
+        repurchase_rate = _extract_repurchase_rate(raw_text, " ".join(badges))
     return {
         "rank": rank,
         "offer_id": offer_id or None,
-        "url": url or (f"https://detail.1688.com/offer/{offer_id}.html" if offer_id else None),
+        "url": _canonical_url(url, offer_id),
+        "raw_url": url or None,
         "title_zh": title or None,
         "title_ko_summary": _ko_summary(title, keyword),
         "image_url": image_url or None,
@@ -137,6 +165,7 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
         "sold_text": sold_text or None,
         "sold_count": sold_count,
         "seller_name": seller or None,
+        "repurchase_rate": repurchase_rate,
         "badges": badges,
         "why_candidate": _why_candidate(title, sold_count, price_min, seller, badges),
         "next_check": [
