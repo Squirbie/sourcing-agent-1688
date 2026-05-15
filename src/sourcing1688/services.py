@@ -173,6 +173,15 @@ async def search_sourcing_products(
 ) -> SearchResponse:
     provider = get_provider(provider_name)
     expansion = expand_keywords(keyword) if has_hangul(keyword) else None
+    if expansion and not expansion.keywords:
+        return SearchResponse(
+            status="partial_data",
+            message="No built-in Chinese seed terms matched this Korean keyword. A Codex agent should generate Chinese 1688 sourcing terms from the user intent and then search live Chrome results.",
+            suggested_action=expansion.agent_instruction,
+            keyword=keyword,
+            warnings=expansion.warnings,
+            **_provider_metadata(provider),
+        )
     keywords = expansion.keywords if expansion and expansion.keywords else [keyword]
     all_items: list[ProductSearchResult] = []
     first_blocked: SearchResponse | None = None
@@ -270,6 +279,16 @@ async def recommend_products(
             error=search_response.error,
             keyword=keyword,
             expanded_keywords=expansion.keywords,
+            **_provider_metadata(provider),
+        )
+    if not search_response.items:
+        return RecommendationResponse(
+            status=search_response.status,
+            message=search_response.message,
+            suggested_action=search_response.suggested_action,
+            keyword=keyword,
+            expanded_keywords=expansion.keywords,
+            warnings=search_response.warnings,
             **_provider_metadata(provider),
         )
 

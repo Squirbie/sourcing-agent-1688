@@ -5,45 +5,56 @@ import re
 from sourcing1688.models import KeywordExpansion
 
 
-KEYWORD_MAP: dict[str, list[str]] = {
-    "\uc554\ub9c9\uc6b0\uc0b0": ["\u9ed1\u80f6\u4f1e", "\u9632\u6652\u4f1e", "\u906e\u9633\u4f1e", "\u6674\u96e8\u4f1e", "\u9632\u7d2b\u5916\u7ebf\u4f1e", "\u906e\u5149\u4f1e"],
-    "\uc5ec\ud589\uc6a9 \ud30c\uc6b0\uce58": ["\u65c5\u884c\u6536\u7eb3\u888b", "\u65c5\u884c\u5316\u5986\u5305", "\u65c5\u6e38\u6d17\u6f31\u5305", "\u884c\u674e\u6536\u7eb3\u5305", "\u51fa\u5dee\u6536\u7eb3\u888b"],
-    "\uc8fc\ubc29 \uc815\ub9ac\ud568": ["\u53a8\u623f\u6536\u7eb3\u76d2", "\u53a8\u623f\u7f6e\u7269\u67b6", "\u8c03\u6599\u6536\u7eb3\u76d2", "\u9910\u5177\u6536\u7eb3\u76d2", "\u53a8\u623f\u6536\u7eb3\u67b6"],
-    "\ubc18\ub824\ub3d9\ubb3c \ube57": ["\u5ba0\u7269\u68b3\u5b50", "\u5ba0\u7269\u5237", "\u5ba0\u7269\u9664\u6bdb\u68b3", "\u732b\u72d7\u68b3\u5b50", "\u5ba0\u7269\u6309\u6469\u68b3"],
-    "\ucc28\ub7c9\uc6a9 \ud587\ube5b\uac00\ub9ac\uac1c": ["\u6c7d\u8f66\u906e\u9633\u6321", "\u8f66\u7a97\u906e\u9633\u5e18", "\u6c7d\u8f66\u9632\u6652\u5e18", "\u524d\u6321\u906e\u9633\u677f", "\u8f66\u7528\u906e\u9633\u677f"],
-    "\ud734\ub300\uc6a9 \uc120\ud48d\uae30": ["\u4fbf\u643a\u98ce\u6247", "\u624b\u6301\u5c0f\u98ce\u6247", "USB\u5c0f\u98ce\u6247", "\u8ff7\u4f60\u98ce\u6247", "\u6302\u8116\u98ce\u6247"],
-    "\ubb34\ub4dc\ub4f1": ["\u6c1b\u56f4\u706f", "\u5c0f\u591c\u706f", "LED\u6c1b\u56f4\u706f", "\u5e8a\u5934\u706f", "\u88c5\u9970\u706f"],
-    "\uc218\ub0a9\ubc15\uc2a4": ["\u6536\u7eb3\u7bb1", "\u6536\u7eb3\u76d2", "\u5851\u6599\u6536\u7eb3\u7bb1", "\u8863\u7269\u6536\u7eb3\u7bb1", "\u5bb6\u7528\u6536\u7eb3\u7bb1"],
-    "\uc2e4\ub9ac\ucf58 \uc8fc\ubc29\uc6a9\ud488": ["\u7845\u80f6\u53a8\u5177", "\u7845\u80f6\u53a8\u623f\u7528\u54c1", "\u7845\u80f6\u9505\u94f2", "\u7845\u80f6\u70d8\u7119\u5de5\u5177", "\u7845\u80f6\u9910\u5177"],
-    "\uc6d4\ub4dc\ucef5 \ucd95\uad6c \uc720\ub2c8\ud3fc": ["\u4e16\u754c\u676f\u7403\u8863", "\u8db3\u7403\u670d", "\u56fd\u5bb6\u961f\u7403\u8863", "2026\u4e16\u754c\u676f\u7403\u8863", "\u8db3\u7403\u8bad\u7ec3\u670d"],
-    "\uc6b4\ub3d9 \uc591\ub9d0": ["\u8fd0\u52a8\u889c", "\u8dd1\u6b65\u889c", "\u6bdb\u5dfe\u5e95\u889c", "\u4e2d\u7b52\u8fd0\u52a8\u889c"],
-    "\ub0a8\uc131 \ubca8\ud2b8": ["\u7537\u58eb\u76ae\u5e26", "\u81ea\u52a8\u6263\u76ae\u5e26", "\u8170\u5e26", "\u5546\u52a1\u76ae\u5e26"],
-    "\ud06c\ub77c\ud504\ud2b8 \ud3ec\uc7a5\ubd09\ud22c": ["\u725b\u76ae\u7eb8\u888b", "\u5916\u5356\u5305\u88c5\u888b", "\u98df\u54c1\u5305\u88c5\u888b", "\u624b\u63d0\u725b\u76ae\u7eb8\u888b"],
-    "\ub7ec\ub2dd\ud654": ["\u8dd1\u6b65\u978b", "\u8fd0\u52a8\u978b", "\u900f\u6c14\u8dd1\u978b", "\u4f11\u95f2\u8fd0\u52a8\u978b"],
-    "\ub0a8\uc131 \uc18d\uc637": ["\u7537\u58eb\u5185\u88e4", "\u5e73\u89d2\u88e4", "\u7eaf\u68c9\u7537\u5185\u88e4", "\u7537\u58eb\u56db\u89d2\u88e4"],
-    "\uc2a4\ub9c8\ud2b8\ud3f0 \uac70\uce58\ub300": ["\u624b\u673a\u652f\u67b6", "\u8f66\u8f7d\u624b\u673a\u652f\u67b6", "\u684c\u9762\u624b\u673a\u652f\u67b6", "\u61d2\u4eba\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
-    "\ud734\ub300\ud3f0 \uac70\uce58\ub300": ["\u624b\u673a\u652f\u67b6", "\u8f66\u8f7d\u624b\u673a\u652f\u67b6", "\u684c\u9762\u624b\u673a\u652f\u67b6", "\u61d2\u4eba\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
-    "\uc5ec\ud589\uc6a9\ud488": ["\u65c5\u884c\u7528\u54c1", "\u65c5\u6e38\u7528\u54c1", "\u65c5\u884c\u6536\u7eb3", "\u4fbf\u643a\u65c5\u884c\u7528\u54c1", "\u6d17\u6f31\u5305", "\u5206\u88c5\u74f6", "\u62a4\u7167\u5939", "\u884c\u674e\u724c", "\u538b\u7f29\u6536\u7eb3\u888b", "\u65c5\u884c\u6536\u7eb3\u888b"],
-    "\uc5ec\ud589 \uc6a9\ud488": ["\u65c5\u884c\u7528\u54c1", "\u65c5\u6e38\u7528\u54c1", "\u65c5\u884c\u6536\u7eb3", "\u4fbf\u643a\u65c5\u884c\u7528\u54c1", "\u6d17\u6f31\u5305", "\u5206\u88c5\u74f6", "\u62a4\u7167\u5939", "\u884c\u674e\u724c", "\u538b\u7f29\u6536\u7eb3\u888b", "\u65c5\u884c\u6536\u7eb3\u888b"],
+CURATED_SEEDS: dict[str, list[str]] = {
+    "암막우산": ["黑胶伞", "防晒伞", "遮阳伞", "晴雨伞", "防紫外线伞", "遮光伞"],
+    "여행용 파우치": ["旅行收纳袋", "旅行化妆包", "旅游洗漱包", "行李收纳包", "出差收纳袋"],
+    "주방 정리함": ["厨房收纳盒", "厨房置物架", "调料收纳盒", "餐具收纳盒", "厨房收纳架"],
+    "반려동물 빗": ["宠物梳子", "宠物刷", "宠物除毛梳", "猫狗梳子", "宠物按摩梳"],
+    "차량용 햇빛가리개": ["汽车遮阳挡", "车窗遮阳帘", "汽车防晒帘", "前挡遮阳板", "车用遮阳板"],
+    "휴대용 선풍기": ["便携风扇", "手持小风扇", "USB小风扇", "迷你风扇", "挂脖风扇"],
+    "무드등": ["氛围灯", "小夜灯", "LED氛围灯", "床头灯", "装饰灯"],
+    "수납박스": ["收纳箱", "收纳盒", "塑料收纳箱", "衣物收纳箱", "家用收纳箱"],
+    "실리콘 주방용품": ["硅胶厨具", "硅胶厨房用品", "硅胶锅铲", "硅胶烘焙工具", "硅胶餐具"],
+    "월드컵 축구 유니폼": ["世界杯球衣", "足球服", "国家队球衣", "2026世界杯球衣", "足球训练服"],
+    "운동 양말": ["运动袜", "跑步袜", "毛巾底袜", "中筒运动袜"],
+    "남성 벨트": ["男士皮带", "自动扣皮带", "腰带", "商务皮带"],
+    "크라프트 포장봉투": ["牛皮纸袋", "外卖包装袋", "食品包装袋", "手提牛皮纸袋"],
+    "러닝화": ["跑步鞋", "运动鞋", "透气跑鞋", "休闲运动鞋"],
+    "남성 속옷": ["男士内裤", "平角裤", "纯棉男内裤", "男士四角裤"],
+    "스마트폰 거치대": ["手机支架", "车载手机支架", "桌面手机支架", "懒人手机支架", "手机架"],
+    "휴대폰 거치대": ["手机支架", "车载手机支架", "桌面手机支架", "懒人手机支架", "手机架"],
+    "여행용품": ["旅行用品", "旅游用品", "旅行收纳", "便携旅行用品", "洗漱包", "分装瓶", "护照夹", "行李牌", "压缩收纳袋", "旅行收纳袋"],
+    "여행 용품": ["旅行用品", "旅游用品", "旅行收纳", "便携旅行用品", "洗漱包", "分装瓶", "护照夹", "行李牌", "压缩收纳袋", "旅行收纳袋"],
 }
 
-COMPONENT_MAP: dict[str, list[str]] = {
-    "\uc6d4\ub4dc\ucef5": ["\u4e16\u754c\u676f\u7403\u8863", "2026\u4e16\u754c\u676f\u7403\u8863"],
-    "\ucd95\uad6c": ["\u8db3\u7403\u670d", "\u8db3\u7403\u8bad\u7ec3\u670d"],
-    "\uc720\ub2c8\ud3fc": ["\u7403\u8863", "\u961f\u670d", "\u56fd\u5bb6\u961f\u7403\u8863"],
-    "\uc591\ub9d0": ["\u8fd0\u52a8\u889c", "\u8dd1\u6b65\u889c"],
-    "\ubca8\ud2b8": ["\u7537\u58eb\u76ae\u5e26", "\u8170\u5e26"],
-    "\ud3ec\uc7a5": ["\u5305\u88c5\u888b", "\u98df\u54c1\u5305\u88c5\u888b"],
-    "\ubd09\ud22c": ["\u725b\u76ae\u7eb8\u888b", "\u624b\u63d0\u725b\u76ae\u7eb8\u888b"],
-    "\uc6b0\uc0b0": ["\u9632\u6652\u4f1e", "\u6674\u96e8\u4f1e"],
-    "\ud30c\uc6b0\uce58": ["\u6536\u7eb3\u888b", "\u5316\u5986\u5305"],
-    "\uc5ec\ud589": ["\u65c5\u884c\u7528\u54c1", "\u65c5\u884c\u6536\u7eb3", "\u6d17\u6f31\u5305", "\u5206\u88c5\u74f6"],
-    "\uc5ec\ud589\uc6a9": ["\u65c5\u884c\u7528\u54c1", "\u65c5\u6e38\u7528\u54c1", "\u4fbf\u643a\u65c5\u884c\u7528\u54c1"],
-    "\uc120\ud48d\uae30": ["\u4fbf\u643a\u98ce\u6247", "\u624b\u6301\u5c0f\u98ce\u6247"],
-    "\uc18d\uc637": ["\u7537\u58eb\u5185\u88e4", "\u5e73\u89d2\u88e4"],
-    "\uc2a4\ub9c8\ud2b8\ud3f0": ["\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
-    "\ud734\ub300\ud3f0": ["\u624b\u673a\u652f\u67b6", "\u624b\u673a\u67b6"],
-    "\uac70\uce58\ub300": ["\u624b\u673a\u652f\u67b6", "\u8f66\u8f7d\u624b\u673a\u652f\u67b6", "\u684c\u9762\u624b\u673a\u652f\u67b6"],
+COMPONENT_HINTS: dict[str, list[str]] = {
+    "월드컵": ["世界杯", "2026世界杯"],
+    "축구": ["足球", "足球训练"],
+    "유니폼": ["球衣", "队服"],
+    "양말": ["袜", "运动袜"],
+    "벨트": ["皮带", "腰带"],
+    "포장": ["包装袋", "食品包装"],
+    "봉투": ["纸袋", "手提袋"],
+    "우산": ["伞", "防晒伞", "晴雨伞"],
+    "파우치": ["收纳袋", "化妆包"],
+    "여행": ["旅行用品", "旅行收纳", "洗漱包", "分装瓶"],
+    "선풍기": ["便携风扇", "手持小风扇"],
+    "속옷": ["男士内裤", "平角裤"],
+    "스마트폰": ["手机", "手机支架"],
+    "휴대폰": ["手机", "手机支架"],
+    "거치대": ["支架", "车载支架", "桌面支架"],
+    "가방": ["包", "背包", "收纳包"],
+    "수납": ["收纳", "收纳盒", "收纳袋"],
+    "주방": ["厨房用品", "厨具", "厨房收纳"],
+    "반려동물": ["宠物用品", "猫狗用品"],
+    "강아지": ["狗用品", "宠物用品"],
+    "고양이": ["猫用品", "宠物用品"],
+    "차량": ["汽车用品", "车载"],
+    "캠핑": ["露营用品", "户外用品"],
+    "등산": ["户外用品", "登山用品"],
+    "운동": ["运动用品", "健身用品"],
+    "사무": ["办公用品", "桌面用品"],
+    "욕실": ["浴室用品", "卫生间用品"],
 }
 
 
@@ -56,7 +67,34 @@ def _contains_chinese(value: str) -> bool:
 
 
 def _dedupe(values: list[str]) -> list[str]:
-    return list(dict.fromkeys(value for value in values if value))
+    return list(dict.fromkeys(value.strip() for value in values if value and value.strip()))
+
+
+def _agent_instruction(keyword: str, seed_terms: list[str]) -> str:
+    seed_clause = f" Use these as optional seeds, not final answers: {', '.join(seed_terms)}." if seed_terms else ""
+    return (
+        f"Generate 5-8 practical Chinese 1688 sourcing search terms for the Korean keyword '{keyword}'."
+        f"{seed_clause} Search the strongest broad term first, read visible related terms/product titles, "
+        "then refine into narrower terms before recommending products. Do not search a Korean placeholder on 1688."
+    )
+
+
+def _workflow() -> list[str]:
+    return [
+        "Generate Chinese 1688 sourcing terms from the user's Korean intent.",
+        "Search a broad Chinese term in the user's Chrome 1688 tab.",
+        "Use visible related searches, product titles, seller categories, and network data to refine the next terms.",
+        "Recommend products from live results, not from the seed list alone.",
+    ]
+
+
+def _component_terms(normalized: str) -> list[str]:
+    compact = normalized.replace(" ", "")
+    terms: list[str] = []
+    for korean_term, chinese_terms in COMPONENT_HINTS.items():
+        if korean_term in normalized or korean_term.replace(" ", "") in compact:
+            terms.extend(chinese_terms)
+    return _dedupe(terms)
 
 
 def expand_keywords(keyword: str) -> KeywordExpansion:
@@ -67,11 +105,12 @@ def expand_keywords(keyword: str) -> KeywordExpansion:
             original_keyword=keyword,
             keywords=[],
             needs_review=True,
-            note="Empty keyword. Provide a Korean or Chinese product keyword.",
+            strategy="empty_keyword",
+            note="Empty keyword. Ask for a product keyword first.",
+            agent_instruction="Ask the user for the product or category they want to source.",
+            search_workflow=[],
+            warnings=["No keyword was provided."],
         )
-
-    if normalized in KEYWORD_MAP:
-        return KeywordExpansion(original_keyword=normalized, keywords=KEYWORD_MAP[normalized])
 
     if _contains_chinese(normalized):
         return KeywordExpansion(
@@ -80,28 +119,51 @@ def expand_keywords(keyword: str) -> KeywordExpansion:
             keywords=[normalized],
             source_language="zh",
             target_language="zh",
+            strategy="chinese_passthrough",
+            seed_terms=[normalized],
+            note="Chinese keyword supplied by the user. Search it directly, then refine from visible 1688 results.",
+            agent_instruction=_agent_instruction(normalized, [normalized]),
+            search_workflow=_workflow(),
         )
 
-    expanded: list[str] = []
-    compact = normalized.replace(" ", "")
-    for korean_term, chinese_terms in COMPONENT_MAP.items():
-        if korean_term in normalized or korean_term.replace(" ", "") in compact:
-            expanded.extend(chinese_terms)
+    if normalized in CURATED_SEEDS:
+        seeds = CURATED_SEEDS[normalized]
+        return KeywordExpansion(
+            status="ok",
+            original_keyword=normalized,
+            keywords=seeds,
+            needs_review=True,
+            strategy="curated_seed_terms",
+            seed_terms=seeds,
+            note="These are starter sourcing terms. Refine them from live 1688 search results before recommending products.",
+            agent_instruction=_agent_instruction(normalized, seeds),
+            search_workflow=_workflow(),
+        )
 
-    deduped = _dedupe(expanded)
-    if deduped:
+    seeds = _component_terms(normalized)
+    if seeds:
         return KeywordExpansion(
             status="partial_data",
             original_keyword=normalized,
-            keywords=deduped,
+            keywords=seeds,
             needs_review=True,
-            note="Built from curated component terms. Review before live sourcing.",
+            strategy="component_seed_terms",
+            seed_terms=seeds,
+            note="Only partial seed terms were inferred from Korean components. Generate better Chinese search terms and validate them on live 1688 results.",
+            agent_instruction=_agent_instruction(normalized, seeds),
+            search_workflow=_workflow(),
+            warnings=["No exact curated term exists; use these only as hints."],
         )
 
     return KeywordExpansion(
         status="partial_data",
         original_keyword=normalized,
-        keywords=[normalized],
+        keywords=[],
         needs_review=True,
-        note="No curated Chinese sourcing mapping exists yet. Provide a Chinese keyword or open a 1688 page in Chrome for analysis.",
+        strategy="agent_generate_terms",
+        seed_terms=[],
+        note="No built-in seed terms matched. The agent must generate Chinese sourcing terms from the user intent and refine them from live 1688 results.",
+        agent_instruction=_agent_instruction(normalized, []),
+        search_workflow=_workflow(),
+        warnings=["Do not search the Korean keyword directly unless the user explicitly asks for that diagnostic."],
     )

@@ -53,12 +53,14 @@ When the user gives a 1688 product URL or asks about the current Chrome page:
 When the user asks for sourcing candidates:
 
 1. Call `expand_sourcing_keywords`.
-2. Use Chrome DevTools to search 1688 with the Chinese keywords. For `s.1688.com` search URLs, GBK-percent-encode Chinese keywords; UTF-8 encoded Chinese keywords can render as broken text and return unrelated results.
-3. Inspect visible results and network responses.
-4. Capture at least 10 visible candidate cards unless the user asks for fewer or the page has fewer visible results. Scroll/load more before giving up at 3-5 items.
-5. Capture product card fields with `evaluate_script`: title, URL, price text, sold text, seller/shop name, image URL, and visible badges.
-6. Call `parse_1688_search_results_snapshot` with the captured items. Pass a current or user-provided CNY/KRW rate when available.
-7. Present the result in Korean with product explanation, CNY price, estimated KRW price, sold count, seller/shop, why it may be a candidate, and what to check next.
+2. Treat returned keywords as seed terms only. They are not a closed dictionary.
+3. If the tool returns `strategy: agent_generate_terms`, or the seed terms look too broad, generate 5-8 practical Chinese 1688 search terms yourself from the user's Korean intent. Do not search a Korean placeholder on 1688.
+4. Use Chrome DevTools to search 1688 with the best Chinese keyword first. For `s.1688.com` search URLs, GBK-percent-encode Chinese keywords; UTF-8 encoded Chinese keywords can render as broken text and return unrelated results.
+5. Inspect visible related searches, product titles, seller category words, and network responses. Use those live signals to refine the next query instead of relying only on the seed list.
+6. Capture at least 10 visible candidate cards unless the user asks for fewer or the page has fewer visible results. Scroll/load more before giving up at 3-5 items.
+7. Capture product card fields with `evaluate_script`: title, URL, price text, sold text, seller/shop name, image URL, and visible badges.
+8. Call `parse_1688_search_results_snapshot` with the captured items. Pass a current or user-provided CNY/KRW rate when available.
+9. Present the result in Korean with a real product explanation, CNY price, estimated KRW price, sold count, seller/shop, why it may be a candidate, and what to check next. Translate/summarize Chinese titles yourself; parser category hints are not final user-facing descriptions.
 
 ## Save Assets
 

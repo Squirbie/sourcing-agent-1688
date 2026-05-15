@@ -7,7 +7,9 @@ def test_expands_korean_blackout_umbrella_to_chinese_sourcing_terms():
     assert result.status == "ok"
     assert "\u9ed1\u80f6\u4f1e" in result.keywords
     assert "\u9632\u6652\u4f1e" in result.keywords
-    assert result.needs_review is False
+    assert result.needs_review is True
+    assert result.strategy == "curated_seed_terms"
+    assert result.agent_instruction
 
 
 def test_expands_requested_commerce_terms_without_placeholder():
@@ -26,15 +28,28 @@ def test_expands_requested_commerce_terms_without_placeholder():
         result = expand_keywords(keyword)
         assert result.status == "ok"
         assert result.keywords == expected
+        assert result.seed_terms == expected
         assert not any("\u4e2d\u6587\u5173\u952e\u8bcd\u5019\u9009" in item for item in result.keywords)
 
 
-def test_unknown_keyword_returns_original_without_fake_chinese_placeholder():
+def test_unknown_keyword_requests_agent_generated_terms_without_fake_placeholder():
     result = expand_keywords("\uc0c8\ub85c\uc6b4\ud14c\uc2a4\ud2b8\uc0c1\ud488")
 
     assert result.status == "partial_data"
     assert result.original_keyword == "\uc0c8\ub85c\uc6b4\ud14c\uc2a4\ud2b8\uc0c1\ud488"
-    assert result.keywords == ["\uc0c8\ub85c\uc6b4\ud14c\uc2a4\ud2b8\uc0c1\ud488"]
+    assert result.keywords == []
     assert result.needs_review is True
+    assert result.strategy == "agent_generate_terms"
     assert "\u4e2d\u6587\u5173\u952e\u8bcd\u5019\u9009" not in " ".join(result.keywords)
+    assert "Generate 5-8 practical Chinese 1688 sourcing search terms" in result.agent_instruction
     assert result.note
+
+
+def test_component_keyword_is_hint_not_closed_mapping():
+    result = expand_keywords("\ucea0\ud551\uc6a9 \ub79c\ud134")
+
+    assert result.status == "partial_data"
+    assert result.strategy == "component_seed_terms"
+    assert "\u9732\u8425\u7528\u54c1" in result.keywords
+    assert result.needs_review is True
+    assert result.warnings

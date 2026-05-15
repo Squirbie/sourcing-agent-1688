@@ -261,7 +261,7 @@ def normalize_api_detail(payload: dict[str, Any], offer_id: str) -> ProductDetai
         live_verified=False,
         source_type="api",
         fetched_at=datetime.now(timezone.utc),
-        warnings=["API detail normalizer is fixture verified; live API not verified in this environment."],
+        warnings=["API detail normalizer has not been live verified in this environment."],
     )
 
 

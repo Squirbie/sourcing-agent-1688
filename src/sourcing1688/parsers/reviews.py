@@ -9,18 +9,34 @@ from sourcing1688 import __version__
 
 
 REVIEW_TAG_TERMS = (
-    "价格",
     "质量",
-    "性价比",
+    "包装",
     "发货",
+    "做工",
+    "好评",
+    "有内容",
     "物流",
     "服务",
-    "好评",
-    "差评",
-    "实惠",
-    "不错",
-    "满意",
+    "颜色",
+    "尺寸",
+    "材质",
+    "态度",
+    "回购",
 )
+
+REVIEW_UI_MARKERS = (
+    "采购商评价",
+    "综合评价",
+    "全部评价",
+    "好评率",
+    "有内容",
+    "暂无更多评价",
+    "暂无评价",
+    "还没有评价",
+    "暂无相关评价",
+)
+
+EMPTY_REVIEW_MARKERS = ("暂无更多评价", "暂无评价", "还没有评价", "暂无相关评价")
 
 
 def _as_text(value: Any) -> str:
@@ -51,10 +67,10 @@ def _extract_summary_tags(text: str) -> list[dict[str, Any]]:
         clean = re.sub(r"\s+", " ", line).strip()
         if not clean or len(clean) > 50:
             continue
-        match = re.search(r"(.{2,24}?)\s+(\d{1,6})$", clean)
+        match = re.search(r"([\u4e00-\u9fffA-Za-z0-9]{2,24})\s+(\d{1,6})$", clean)
         if not match:
             continue
-        label = match.group(1).strip(" ：:")
+        label = match.group(1).strip()
         if not label or label in seen:
             continue
         if not any(term in label for term in REVIEW_TAG_TERMS):
@@ -70,9 +86,9 @@ def _extract_review_texts(text: str) -> list[str]:
         clean = re.sub(r"\s+", " ", line).strip()
         if len(clean) < 12 or len(clean) > 240:
             continue
-        if any(marker in clean for marker in ["暂无有效评价", "未找到符合您筛选的记录", "买家评价", "累计评价"]):
+        if any(marker in clean for marker in REVIEW_UI_MARKERS):
             continue
-        if any(term in clean for term in REVIEW_TAG_TERMS):
+        if re.search(r"[\u4e00-\u9fff]", clean):
             reviews.append(clean)
     return list(dict.fromkeys(reviews))[:20]
 
@@ -83,7 +99,9 @@ def _extract_review_summary(text: str) -> dict[str, Any]:
     review_count_text = None
     positive_rate = None
     content_review_count_text = None
-    if match := re.search(r"商品评价\s+([0-9](?:\.[0-9])?)", normalized):
+    if match := re.search(r"(?:综合评价|综合评分|评分)\s*([0-9](?:\.[0-9])?)", normalized):
+        score = float(match.group(1))
+    elif match := re.search(r"\b([0-5](?:\.[0-9])?)\s+(?:[0-9]+\+?条评价|好评率)", normalized):
         score = float(match.group(1))
     if match := re.search(r"([0-9]+(?:\.[0-9]+)?万?\+?)\s*条评价", normalized):
         review_count_text = match.group(1)
@@ -148,15 +166,15 @@ def parse_review_snapshot(
     review_summary = _extract_review_summary(text)
     summary_tags = _extract_summary_tags(text)
     review_texts = _extract_review_texts(text)
-    empty_markers = [marker for marker in ["暂无有效评价", "未找到符合您筛选的记录"] if marker in text]
+    empty_markers = [marker for marker in EMPTY_REVIEW_MARKERS if marker in text]
     signals = [_payload_signal(payload) for payload in network_payloads or [] if _as_text(payload)]
     warnings: list[str] = []
     if empty_markers and summary_tags:
-        warnings.append("평가 태그는 보이지만 개별 리뷰 목록은 현재 필터/권한/동적 API 상태에서 비어 있습니다.")
+        warnings.append("리뷰 태그는 보이지만 개별 리뷰 목록은 현재 화면 또는 네트워크 응답에서 비어 있습니다.")
     elif empty_markers:
         warnings.append("현재 화면에서 개별 리뷰 목록이 비어 있습니다.")
     if any(signal.get("status") == "system_error" for signal in signals):
-        warnings.append("리뷰 목록 API 응답 중 system_error가 있어 Chrome 화면 기준 태그와 다른 네트워크 응답을 함께 확인해야 합니다.")
+        warnings.append("리뷰 목록 API 응답 중 system_error가 있어 Chrome 화면의 리뷰 요약과 다른 네트워크 응답을 함께 확인해야 합니다.")
 
     summary_has_data = any(value is not None for value in review_summary.values())
     status = "ok" if summary_has_data or summary_tags or review_texts else "partial_data"
@@ -177,7 +195,7 @@ def parse_review_snapshot(
         "network_signals": signals,
         "warnings": warnings,
         "seller_notes": [
-            "평가 태그는 상품 반응의 방향성 확인용으로 사용하세요.",
-            "개별 리뷰 목록이 비어 있으면 옵션/필터를 바꾸거나 로그인 상태의 Chrome 네트워크 응답을 다시 캡처하세요.",
+            "리뷰 태그는 상품 반응의 방향성을 보는 참고 자료로 사용하세요.",
+            "개별 리뷰 목록이 비어 있으면 옵션, 필터, 로그인 상태, Chrome 네트워크 응답을 다시 확인하세요.",
         ],
     }

@@ -63,6 +63,11 @@ class KeywordExpansion(JsonModel):
     target_language: str = "zh"
     needs_review: bool = False
     note: str | None = None
+    strategy: str | None = None
+    seed_terms: list[str] = Field(default_factory=list)
+    agent_instruction: str | None = None
+    search_workflow: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SellerInfo(JsonModel):

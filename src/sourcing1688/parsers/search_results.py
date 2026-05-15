@@ -12,6 +12,21 @@ from sourcing1688.utils import extract_offer_id
 
 DEFAULT_CNY_KRW_RATE = 190.0
 
+COMMON_BADGES = (
+    "源头工厂",
+    "实力商家",
+    "超级工厂",
+    "诚信通",
+    "跨境专供",
+    "支持OEM",
+    "支持ODM",
+    "一件代发",
+    "48小时发货",
+    "24小时发货",
+    "现货",
+    "工厂直供",
+)
+
 
 def _as_text(value: Any) -> str:
     return str(value or "").strip()
@@ -45,8 +60,6 @@ def parse_chinese_count(value: str) -> int | None:
 def _extract_price_range(*values: Any) -> tuple[float | None, float | None]:
     text = " ".join(_as_text(value) for value in values if value is not None)
     numbers = [float(item) for item in re.findall(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", text)]
-    if not numbers:
-        return None, None
     useful = [number for number in numbers if number >= 0.01]
     if not useful:
         return None, None
@@ -77,17 +90,20 @@ def _canonical_url(url: str, offer_id: str | None) -> str | None:
 
 def _extract_repurchase_rate(*values: Any) -> float | None:
     text = " ".join(_as_text(value) for value in values if value is not None)
-    match = re.search(r"回头率\s*([0-9]+(?:\.[0-9]+)?)\s*%", text)
+    match = re.search(r"(?:回头率|复购率|回购率)\s*([0-9]+(?:\.[0-9]+)?)\s*%", text)
     if not match:
         return None
     return float(match.group(1)) / 100
 
 
-def _extract_ranking_badges(*values: Any) -> list[str]:
+def _extract_badges(*values: Any) -> list[str]:
     text = " ".join(_as_text(value) for value in values if value is not None)
-    badges = re.findall(r"[\u4e00-\u9fffA-Za-z0-9]+榜第\d+名", text)
-    badges.extend(re.findall(r"比同款低\d+%", text))
-    badges.extend(re.findall(r"退货包运费|先采后付|新人价|首单减\d+元|下单返拿样费", text))
+    badges: list[str] = []
+    for badge in COMMON_BADGES:
+        if badge in text:
+            badges.append(badge)
+    badges.extend(re.findall(r"(?:回头率|复购率|回购率)\s*[0-9]+(?:\.[0-9]+)?%", text))
+    badges.extend(re.findall(r"(?:已售|全网|成交)\s*[0-9]+(?:\.[0-9]+)?[万千]?\+?件?", text))
     return list(dict.fromkeys(badges))
 
 
@@ -95,38 +111,38 @@ def _krw(value: float | None, rate: float) -> int | None:
     return int(round(value * rate)) if value is not None else None
 
 
-def _ko_summary(title: str, keyword: str) -> str:
+def _category_hint(title: str, keyword: str) -> str | None:
     source = f"{keyword} {title}"
-    rules = [
-        (("旅行", "旅游", "行李", "护照", "洗漱", "收纳", "分装", "便携", "出差"), "여행용 수납/휴대 편의용품"),
-        (("手机支架", "手机架", "自拍杆", "车载", "桌面支架"), "휴대폰 거치대/촬영 보조용품"),
-        (("雨伞", "遮阳伞", "防晒伞", "黑胶伞"), "자외선 차단/암막 우산"),
-        (("宠物", "猫", "狗", "牵引", "玩偶"), "반려동물 용품"),
-        (("球衣", "足球服", "运动", "跑步"), "스포츠/운동용품"),
-        (("包装", "纸袋", "食品袋"), "포장/배송 소모품"),
+    hints = [
+        (("旅行", "旅游", "收纳", "洗漱", "行李", "护照", "分装瓶"), "여행/수납 관련 후보"),
+        (("手机", "支架", "车载", "桌面", "懒人支架"), "스마트폰 거치/차량용 액세서리 후보"),
+        (("伞", "防晒", "遮阳", "晴雨", "黑胶"), "우산/자외선 차단 관련 후보"),
+        (("宠物", "猫", "狗", "牵引", "胸背", "猫咪"), "반려동물 용품 후보"),
+        (("运动", "跑步", "健身", "户外", "露营"), "스포츠/아웃도어 관련 후보"),
+        (("包装", "纸袋", "食品袋", "手提袋"), "포장/소모품 관련 후보"),
     ]
-    for terms, summary in rules:
+    for terms, summary in hints:
         if any(term in source for term in terms):
             return summary
-    return "1688 상품 후보"
+    return None
 
 
-def _why_candidate(title: str, sold_count: int | None, price_min: float | None, seller: str, badges: list[str]) -> list[str]:
+def _why_candidate(sold_count: int | None, price_min: float | None, seller: str, badges: list[str]) -> list[str]:
     notes: list[str] = []
     if sold_count and sold_count >= 10000:
-        notes.append("판매량 표시가 높아 수요 확인용 후보로 볼 수 있습니다.")
+        notes.append("판매 신호가 매우 높아 수요 검증용 후보로 볼 수 있습니다.")
     elif sold_count and sold_count >= 1000:
-        notes.append("판매량이 어느 정도 보여 테스트 후보로 볼 수 있습니다.")
+        notes.append("판매량이 확인되어 테스트 후보로 검토할 수 있습니다.")
     if price_min is not None and price_min <= 10:
-        notes.append("낮은 단가대라 샘플 테스트와 마진 검토가 쉽습니다.")
+        notes.append("표시 단가가 낮아 샘플 테스트와 마진 검토가 쉽습니다.")
     elif price_min is not None:
-        notes.append("표시 가격 기준으로 원가 범위를 바로 비교할 수 있습니다.")
+        notes.append("표시 가격 기준으로 국내 판매가와 마진을 바로 비교할 수 있습니다.")
     if seller:
         notes.append("판매자명이 확인되어 상점 상세 검증으로 이어갈 수 있습니다.")
     if badges:
-        notes.append("검색 카드에 배지/판매 신호가 일부 노출됩니다.")
+        notes.append("검색 카드에서 판매/배송/상점 관련 신호가 일부 확인됩니다.")
     if not notes:
-        notes.append("검색 결과에 노출된 상품으로 상세페이지 검증이 필요합니다.")
+        notes.append("검색 결과에서 노출된 후보입니다. 상세페이지에서 MOQ, 옵션, 판매자 신뢰도를 확인해야 합니다.")
     return notes
 
 
@@ -143,7 +159,7 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
     raw_text = _as_text(raw.get("raw_text") or raw.get("text") or " ".join(str(value) for value in raw.values() if not isinstance(value, (dict, list))))
     badges = raw.get("badges") if isinstance(raw.get("badges"), list) else []
     badges = [_as_text(badge) for badge in badges if _as_text(badge)]
-    badges = list(dict.fromkeys(badges + _extract_ranking_badges(raw_text, title)))
+    badges = list(dict.fromkeys(badges + _extract_badges(raw_text, title)))
     price_min, price_max = _extract_price_range(raw.get("price_cny_min"), raw.get("price_cny_max"), price_text)
     sold_count = parse_chinese_count(sold_text)
     repurchase_rate = raw.get("repurchase_rate")
@@ -155,7 +171,8 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
         "url": _canonical_url(url, offer_id),
         "raw_url": url or None,
         "title_zh": title or None,
-        "title_ko_summary": _ko_summary(title, keyword),
+        "title_ko_summary": _category_hint(title, keyword),
+        "agent_description_instruction": "Translate the Chinese title and visible card context into a Korean seller-facing product description before presenting it.",
         "image_url": image_url or None,
         "price_text": price_text or None,
         "price_cny_min": price_min,
@@ -167,10 +184,10 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
         "seller_name": seller or None,
         "repurchase_rate": repurchase_rate,
         "badges": badges,
-        "why_candidate": _why_candidate(title, sold_count, price_min, seller, badges),
+        "why_candidate": _why_candidate(sold_count, price_min, seller, badges),
         "next_check": [
-            "상세페이지에서 MOQ, 옵션, 배송 가능 수량을 확인하세요.",
-            "리뷰/재구매율/상점 점수를 확인한 뒤 샘플 발주 여부를 판단하세요.",
+            "상세페이지에서 MOQ, 옵션, 재고, 배송 가능 수량을 확인하세요.",
+            "리뷰, 재구매율, 상점 점수, 실제 이미지/영상 품질을 확인한 뒤 샘플 발주 여부를 판단하세요.",
         ],
     }
 

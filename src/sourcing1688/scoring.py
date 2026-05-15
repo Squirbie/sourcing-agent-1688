@@ -190,7 +190,7 @@ def score_product(product: ProductSearchResult | ProductDetail) -> SourcingScore
         risks.append("누락 필드가 많아 현재 점수의 신뢰도가 낮습니다.")
 
     if not why_good:
-        notes.append("현재 fixture/provider 데이터만으로 강한 추천 근거가 부족합니다.")
+        notes.append("현재 수집된 데이터만으로 강한 추천 근거가 부족합니다.")
     notes.append("한국 셀러 관점 점수는 판매량, 복구매율, 상점 점수, 단가, MOQ, 발송/상세 품질을 가중 합산했습니다.")
 
     if final_score >= 80 and confidence >= 0.75:
