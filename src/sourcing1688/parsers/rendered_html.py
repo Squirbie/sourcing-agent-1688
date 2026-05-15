@@ -10,7 +10,7 @@ from typing import Any
 from bs4 import BeautifulSoup
 
 from sourcing1688.models import DetailResponse, PriceTier, ProductDetail, SellerInfo, SkuOption
-from sourcing1688.parsers.asset_extractor import dedupe_urls, extract_assets, extract_urls_from_text
+from sourcing1688.parsers.asset_extractor import VIDEO_EXTENSIONS, dedupe_urls, extract_assets, extract_urls_from_text, safe_urlparse
 from sourcing1688.parsers.embedded_json import extract_embedded_json_candidates, merge_candidates, walk_json_candidates
 from sourcing1688.utils import extract_offer_id, structured_error
 
@@ -520,8 +520,11 @@ def parse_visible_page_snapshot(
     media_tags: list[str] = []
     for url in media_urls or []:
         escaped_url = html_escape(str(url), quote=True)
-        lowered = str(url).lower().split("?", 1)[0]
-        if lowered.endswith((".mp4", ".m3u8", ".mov")) or "video" in lowered:
+        lowered = str(url).lower()
+        parsed = safe_urlparse(lowered)
+        path = lowered.split("?", 1)[0]
+        host = parsed.netloc if parsed else ""
+        if path.endswith(VIDEO_EXTENSIONS) or "video" in host:
             media_tags.append(f'<video src="{escaped_url}"></video>')
         else:
             media_tags.append(f'<img src="{escaped_url}">')

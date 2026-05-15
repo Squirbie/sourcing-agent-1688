@@ -222,6 +222,7 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
         body_text=body_text,
         media_urls=[
             "https://cbu01.alicdn.com/img/ibank/O1CN01rejsj61Bs2sgIAIpZ_!!0-0-cib.jpg",
+            "https://img.alicdn.com/imgextra/i1/6000000001270/O1CN01BnFLqn1LFi16CptNf_!!6000000001270-0-tbvideo.jpg",
             "https://cloud.video.taobao.com/play/u/2216180205720/p/2/e/6/t/1/494830060237.mp4",
         ],
     )
@@ -232,7 +233,10 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
     assert detail.price_tiers[0].price == 25.0
     assert detail.trade_volume == 100
     assert detail.seller.name == "杜老汉（山东）生物科技有限公司"
-    assert detail.main_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN01rejsj61Bs2sgIAIpZ_!!0-0-cib.jpg"]
+    assert detail.main_image_urls == [
+        "https://cbu01.alicdn.com/img/ibank/O1CN01rejsj61Bs2sgIAIpZ_!!0-0-cib.jpg",
+        "https://img.alicdn.com/imgextra/i1/6000000001270/O1CN01BnFLqn1LFi16CptNf_!!6000000001270-0-tbvideo.jpg",
+    ]
     assert detail.video_urls == ["https://cloud.video.taobao.com/play/u/2216180205720/p/2/e/6/t/1/494830060237.mp4"]
 
 
