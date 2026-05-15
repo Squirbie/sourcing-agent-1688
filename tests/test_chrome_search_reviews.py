@@ -158,6 +158,26 @@ def test_search_results_does_not_verify_lookalike_1688_domain():
     assert payload["capture_status"] == "unverified_source_url"
 
 
+def test_search_results_does_not_turn_external_digits_into_1688_offer_urls():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {"title": "外部候选", "url": "https://example.com/item?skuId=999888777666"},
+            {"title": "伪域名候选", "url": "https://detail.1688.com.evil.test/offer/800000000999.html"},
+            {"title": "外部显式候选", "url": "https://example.com/item/abc", "offer_id": "999888777667"},
+        ],
+        min_items=1,
+    )
+
+    assert payload["items"][0]["offer_id"] is None
+    assert payload["items"][0]["url"] == "https://example.com/item?skuId=999888777666"
+    assert payload["items"][1]["offer_id"] is None
+    assert payload["items"][1]["url"] == "https://detail.1688.com.evil.test/offer/800000000999.html"
+    assert payload["items"][2]["offer_id"] is None
+    assert payload["items"][2]["url"] == "https://example.com/item/abc"
+
+
 def test_search_results_accepts_chinese_keys_and_price_ranges():
     payload = parse_search_results_snapshot(
         keyword="手机防水袋",

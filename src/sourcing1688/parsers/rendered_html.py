@@ -204,10 +204,14 @@ def _extract_visible_price_tiers(soup: BeautifulSoup) -> list[PriceTier]:
     for line in lines:
         clean = re.sub(r"\s+", " ", line)
         qty_first = re.search(r"(?:≥|>=)?\s*(\d+)(?:\s*[-~—]\s*\d+)?\s*(?:个|件|只|套|箱|包)?\s*(?:¥|￥)\s*(\d+(?:\.\d+)?)", clean)
+        if not qty_first:
+            qty_first = re.search(r"(?:≥|>=)?\s*(\d+)(?:\s*[-~—]\s*\d+)?\s*(?:个|件|只|套|箱|包)\s*(\d+(?:\.\d+)?)\s*(?:元|块)", clean)
         if qty_first:
             tiers.append(PriceTier(min_quantity=int(qty_first.group(1)), price=float(qty_first.group(2))))
             continue
         price_first = re.search(r"(?:¥|￥)\s*(\d+(?:\.\d+)?)\s*(?:/|每|起)?\s*(?:≥|>=)?\s*(\d+)(?:\s*[-~—]\s*\d+)?\s*(?:个|件|只|套|箱|包)", clean)
+        if not price_first:
+            price_first = re.search(r"(\d+(?:\.\d+)?)\s*(?:元|块)\s*(?:/|每|起)?\s*(?:≥|>=)?\s*(\d+)(?:\s*[-~—]\s*\d+)?\s*(?:个|件|只|套|箱|包)", clean)
         if price_first:
             tiers.append(PriceTier(min_quantity=int(price_first.group(2)), price=float(price_first.group(1))))
     if tiers:
@@ -216,9 +220,13 @@ def _extract_visible_price_tiers(soup: BeautifulSoup) -> list[PriceTier]:
             deduped.setdefault(tier.min_quantity, tier)
         return sorted(deduped.values(), key=lambda tier: tier.min_quantity)
     text = _visible_text(soup)
-    if "¥" not in text:
+    if not re.search(r"(?:¥|￥|\d+(?:\.\d+)?\s*(?:元|块))", text):
         return []
-    price_match = re.search(r"¥\s*(\d+(?:\.\d+)?)\s*(?:[-~]\s*¥?\s*(\d+(?:\.\d+)?))?", text)
+    price_match = re.search(r"(?:¥|￥)\s*(\d+(?:\.\d+)?)\s*(?:[-~—]\s*(?:¥|￥)?\s*(\d+(?:\.\d+)?))?", text)
+    if not price_match:
+        price_match = re.search(r"(\d+(?:\.\d+)?)\s*[-~—]\s*(\d+(?:\.\d+)?)\s*(?:元|块)", text)
+    if not price_match:
+        price_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:元|块)", text)
     if not price_match:
         return []
     min_quantity = 1

@@ -111,11 +111,7 @@ def _extract_offer_id(url: str) -> str | None:
     try:
         return extract_offer_id(url)
     except ValueError:
-        pass
-    parsed = urlparse(url)
-    for value in [parsed.path, parsed.query, url]:
-        if match := re.search(r"(\d{9,})", value):
-            return match.group(1)
+        return None
     return None
 
 
@@ -127,7 +123,10 @@ def _canonical_url(url: str, offer_id: str | None) -> str | None:
 
 def _is_1688_url(url: str) -> bool:
     try:
-        host = (urlparse(url).hostname or "").lower()
+        candidate = url
+        if url and not re.match(r"^[a-z][a-z0-9+.-]*://", url, flags=re.IGNORECASE) and re.match(r"^[^/\s]+\.[^/\s]+/", url):
+            candidate = f"https://{url}"
+        host = (urlparse(candidate).hostname or "").lower()
     except ValueError:
         return False
     return host == "1688.com" or host.endswith(".1688.com")
@@ -197,7 +196,14 @@ def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float
     url = _as_text(_raw_get(raw, "url", "href", "product_url", "productUrl", "链接", "商品链接", "详情链接"))
     if not title and not url:
         return None
-    offer_id = _as_text(_raw_get(raw, "offer_id", "offerId")) or _extract_offer_id(url)
+    raw_offer_id = _as_text(_raw_get(raw, "offer_id", "offerId"))
+    if raw_offer_id and (not url or _is_1688_url(url)):
+        try:
+            offer_id = extract_offer_id(raw_offer_id)
+        except ValueError:
+            offer_id = raw_offer_id if re.fullmatch(r"\d{6,}", raw_offer_id) else None
+    else:
+        offer_id = _extract_offer_id(url)
     price_text = _as_text(_raw_get(raw, "price_text", "priceText", "price", "price_cny", "priceCny", "价格", "价格范围", "价格区间", "价格文本", "单价"))
     sold_text = _as_text(_raw_get(raw, "sold_text", "soldText", "sales_text", "salesText", "month_sold_text", "monthSoldText", "trade_text", "tradeText", "成交", "销量", "已售", "月销量"))
     seller = _as_text(_raw_get(raw, "seller_name", "sellerName", "seller", "shop_name", "shopName", "店铺", "店铺名", "卖家", "商家", "供应商"))

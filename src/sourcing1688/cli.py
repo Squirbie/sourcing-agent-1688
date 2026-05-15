@@ -31,6 +31,15 @@ from sourcing1688.state import clean_home, home_payload, init_home, runtime_path
 from sourcing1688.storage import SourcingStorage
 from sourcing1688.utils import dumps_json, error_payload
 
+
+def _configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
+_configure_utf8_stdio()
+
 app = typer.Typer(help="Agent-friendly 1688 sourcing toolkit.")
 shortlist_app = typer.Typer(help="Manage sourcing shortlists.")
 browser_profile_app = typer.Typer(help="Manage Playwright browser profiles.")
@@ -47,8 +56,7 @@ ProviderOption = Annotated[str | None, typer.Option("--provider", help="Provider
 
 
 def _echo_json(payload, *, exit_code: int = 0) -> None:
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
+    _configure_utf8_stdio()
     typer.echo(dumps_json(payload))
     if exit_code:
         raise typer.Exit(exit_code)

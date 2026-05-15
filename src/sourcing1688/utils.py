@@ -5,7 +5,7 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote_from_bytes, quote_plus
+from urllib.parse import parse_qs, quote_from_bytes, quote_plus, urlparse
 
 from pydantic import BaseModel
 
@@ -47,13 +47,31 @@ def extract_offer_id(value: str) -> str:
     if re.fullmatch(r"\d{6,}", value):
         return value
 
-    match = re.search(r"(?:https?://)?(?:[^/\s]+\.)?1688\.com(?::\d+)?/offer/(?P<offer_id>\d{6,})(?:\.html)?", value)
-    if match:
-        return match.group("offer_id")
+    candidates = [value]
+    if not re.match(r"^[a-z][a-z0-9+.-]*://", value, flags=re.IGNORECASE) and re.match(r"^[^/\s]+\.[^/\s]+/", value):
+        candidates.insert(0, f"https://{value}")
 
-    query_match = re.search(r"(?:offerId|offerIds|offer_id)=(?P<offer_id>\d{6,})", value, flags=re.IGNORECASE)
-    if query_match:
-        return query_match.group("offer_id")
+    for candidate in candidates:
+        try:
+            parsed = urlparse(candidate)
+        except ValueError:
+            continue
+        host = (parsed.hostname or "").lower()
+        if host and not (host == "1688.com" or host.endswith(".1688.com")):
+            continue
+        if match := re.search(r"(?:^|/)offer/(?P<offer_id>\d{6,})(?:\.html)?(?:$|[/?#])", parsed.path):
+            return match.group("offer_id")
+        if host:
+            query = parse_qs(parsed.query)
+            for key in ("offerId", "offerIds", "offer_id"):
+                for item in query.get(key, []) + query.get(key.lower(), []):
+                    if re.fullmatch(r"\d{6,}", item):
+                        return item
+
+    if not re.search(r"://|^[^/\s]+\.[^/\s]+", value):
+        query_match = re.search(r"(?:offerId|offerIds|offer_id)=(?P<offer_id>\d{6,})", value, flags=re.IGNORECASE)
+        if query_match:
+            return query_match.group("offer_id")
 
     raise ValueError(f"Could not extract 1688 offer_id from: {value}")
 

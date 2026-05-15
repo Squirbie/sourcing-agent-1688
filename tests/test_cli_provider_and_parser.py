@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -37,6 +40,22 @@ def test_parse_html_cli_json():
     assert result.exit_code == 0
     assert payload["status"] == "partial_data"
     assert payload["item"]["offer_id"] == "123456789"
+
+
+def test_parse_html_cli_non_json_forces_utf8_when_parent_encoding_is_cp949():
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "cp949"
+    result = subprocess.run(
+        [sys.executable, "-m", "sourcing1688.cli", "parse-html", str(FIXTURES / "product_detail_sample.html")],
+        cwd=Path(__file__).parents[1],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
+    assert "黑胶防晒晴雨伞" in result.stdout.decode("utf-8")
 
 
 def test_download_assets_from_html_cli_json(tmp_path, monkeypatch):
