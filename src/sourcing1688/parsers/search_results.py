@@ -47,7 +47,7 @@ def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def parse_chinese_count(value: str) -> int | None:
     text = value.replace(",", "").replace("＋", "+").strip()
     patterns = [
-        r"(?:成交|已售|销量|售出|卖出|全网)\s*([0-9]+(?:\.[0-9]+)?)(万|千)?\+?\s*件?",
+        r"(?:成交|已售|销量|售出|卖出|全网)\D{0,12}?([0-9]+(?:\.[0-9]+)?)(万|千)?\+?\s*件?",
         r"([0-9]+(?:\.[0-9]+)?)(万|千)\+?\s*(?:件|单|人)?",
         r"(\d+(?:\.\d+)?)",
     ]
@@ -72,6 +72,11 @@ def _extract_price_range(*values: Any) -> tuple[float | None, float | None]:
     text = " ".join(_as_text(value) for value in values if value is not None)
     currency_numbers = re.findall(r"(?:¥|￥|CNY|RMB)\s*(\d+(?:\.\d+)?)", text, flags=re.IGNORECASE)
     currency_numbers.extend(re.findall(r"(\d+(?:\.\d+)?)\s*元", text))
+    if not currency_numbers:
+        before_moq = re.split(r"\d+\s*(?:件|个|只|套|箱|包)\s*(?:起批|起订|起购)", text, maxsplit=1)[0]
+        currency_numbers = re.findall(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", before_moq)
+        if not currency_numbers and re.search(r"起批|起订|起购", text):
+            return None, None
     source_numbers = currency_numbers or re.findall(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", text)
     numbers = [float(item) for item in source_numbers]
     useful = [number for number in numbers if number >= 0.01]
@@ -107,7 +112,7 @@ def _is_1688_url(url: str) -> bool:
         host = urlparse(url).netloc.lower()
     except ValueError:
         return False
-    return host.endswith("1688.com") or host.endswith(".1688.com")
+    return host == "1688.com" or host.endswith(".1688.com")
 
 
 def _extract_repurchase_rate(*values: Any) -> float | None:

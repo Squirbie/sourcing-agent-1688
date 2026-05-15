@@ -187,7 +187,7 @@ async def download_1688_product_assets_from_html_content(
             "provider": "local_html",
             "provider_version": PARSER_VERSION,
             "source_type": "local_html",
-            "live_verified": True,
+            "live_verified": False,
             "manifest_path": str(Path(manifest.saved_dir) / "manifest.json"),
             "counts": manifest.counts,
             "warnings": parsed.warnings,

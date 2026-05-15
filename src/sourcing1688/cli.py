@@ -43,7 +43,7 @@ app.add_typer(auth_app, name="auth")
 
 
 JsonOption = Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON.")]
-ProviderOption = Annotated[str | None, typer.Option("--provider", help="Provider: auto, api, browser, or local_html.")]
+ProviderOption = Annotated[str | None, typer.Option("--provider", help="Provider: auto, chrome, api, browser, or local_html.")]
 
 
 def _echo_json(payload, *, exit_code: int = 0) -> None:

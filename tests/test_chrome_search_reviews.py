@@ -92,10 +92,64 @@ def test_search_results_prefers_unit_bearing_sales_count_and_currency_price():
     assert item["price_cny_max"] == 2.5
 
 
+def test_search_results_uses_number_before_moq_as_price_without_using_moq():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "title": "旅行收纳袋",
+                "url": "https://detail.1688.com/offer/800000000100.html",
+                "price_text": "5.80 2\u4ef6\u8d77\u6279",
+                "sold_text": "已售99件",
+            }
+        ],
+        cny_krw_rate=200,
+        min_items=1,
+    )
+
+    item = payload["items"][0]
+    assert item["price_cny_min"] == 5.8
+    assert item["price_cny_max"] == 5.8
+    assert item["sold_count"] == 99
+
+
+def test_search_results_does_not_use_moq_alone_as_price():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "title": "旅行收纳袋",
+                "url": "https://detail.1688.com/offer/800000000101.html",
+                "price_text": "2\u4ef6\u8d77\u6279",
+            }
+        ],
+        cny_krw_rate=200,
+        min_items=1,
+    )
+
+    item = payload["items"][0]
+    assert item["price_cny_min"] is None
+    assert item["price_cny_max"] is None
+
+
 def test_search_results_marks_non_1688_source_as_unverified():
     payload = parse_search_results_snapshot(
         keyword="旅行用品",
         source_url="https://example.com/search",
+        items=[{"title": "旅行收纳袋", "url": "https://detail.1688.com/offer/800000000001.html"}],
+        min_items=1,
+    )
+
+    assert payload["live_verified"] is False
+    assert payload["capture_status"] == "unverified_source_url"
+
+
+def test_search_results_does_not_verify_lookalike_1688_domain():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://fake1688.com/selloffer/offer_search.htm",
         items=[{"title": "旅行收纳袋", "url": "https://detail.1688.com/offer/800000000001.html"}],
         min_items=1,
     )

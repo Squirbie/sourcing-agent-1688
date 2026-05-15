@@ -67,6 +67,7 @@ class KeywordExpansion(JsonModel):
     seed_terms: list[str] = Field(default_factory=list)
     agent_instruction: str | None = None
     search_workflow: list[str] = Field(default_factory=list)
+    search_urls: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
 

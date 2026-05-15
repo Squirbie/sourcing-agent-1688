@@ -9,13 +9,14 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
+from sourcing1688 import __version__
 from sourcing1688.models import DetailResponse, PriceTier, ProductDetail, SellerInfo, SkuOption
 from sourcing1688.parsers.asset_extractor import VIDEO_EXTENSIONS, dedupe_urls, extract_assets, extract_urls_from_text, safe_urlparse
 from sourcing1688.parsers.embedded_json import extract_embedded_json_candidates, merge_candidates, walk_json_candidates
 from sourcing1688.utils import extract_offer_id, structured_error
 
 
-PARSER_VERSION = "0.4.0"
+PARSER_VERSION = __version__
 ATTRIBUTE_STOP_LINES = {"商品描述", "价格说明", "包装信息", "店铺推荐", "买家评价", "订购说明"}
 
 
@@ -43,6 +44,20 @@ def _text_lines(soup: BeautifulSoup) -> list[str]:
 
 def _visible_text(soup: BeautifulSoup) -> str:
     return "\n".join(_text_lines(soup))
+
+
+def _is_1688_source_url(source_url: str | None) -> bool:
+    if not source_url:
+        return False
+    parsed = safe_urlparse(source_url)
+    if not parsed:
+        return False
+    host = parsed.netloc.lower()
+    return host == "1688.com" or host.endswith(".1688.com")
+
+
+def _is_live_browser_capture(provider: str, source_url: str | None) -> bool:
+    return provider == "chrome_devtools" and _is_1688_source_url(source_url)
 
 
 def _parse_chinese_count(value: str) -> int | None:
@@ -248,9 +263,26 @@ def _extract_seller(embedded: dict) -> SellerInfo | None:
 
 def _extract_visible_seller(soup: BeautifulSoup) -> SellerInfo | None:
     lines = _text_lines(soup)
-    for line in lines[:80]:
-        if any(marker in line for marker in ["有限公司", "工厂", "商行", "店", "厂"]) and len(line) <= 60:
-            return SellerInfo(name=line)
+    candidates: list[tuple[int, str]] = []
+    skip_markers = ("供应商亮点", "功能亮点", "源头工厂", "支持OEM", "支持ODM", "月产", "跨境专供", "共")
+    for line in lines[:160]:
+        clean = re.sub(r"\s+", " ", line).strip()
+        if not clean or len(clean) > 80:
+            continue
+        if "|" in clean or any(marker in clean for marker in skip_markers):
+            continue
+        score = 0
+        if "有限公司" in clean:
+            score += 100
+        elif "公司" in clean:
+            score += 80
+        elif any(marker in clean for marker in ("工厂", "商行", "店铺", "店", "厂")):
+            score += 40
+        if score and re.search(r"[\u4e00-\u9fff]", clean):
+            candidates.append((score - abs(len(clean) - 12), clean))
+    if candidates:
+        candidates.sort(reverse=True)
+        return SellerInfo(name=candidates[0][1])
     return None
 
 
@@ -277,6 +309,8 @@ def _extract_visible_trade_volume(soup: BeautifulSoup) -> int | None:
         r"一年内\s*([0-9,.]+(?:万)?\+?)\s*个成交",
         r"([0-9,.]+(?:万)?\+?)\s*个成交",
         r"已售\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个)?",
+        r"近30天销量\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个)?",
+        r"成交\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个|单)?",
     ]:
         if match := re.search(pattern, text):
             return _parse_chinese_count(match.group(1))
@@ -432,6 +466,7 @@ def _build_detail_response(
     seller = _extract_seller(embedded) or _extract_visible_seller(soup)
     main_images, detail_images = _promote_main_images(assets["main_images"], assets["detail_images"])
     option_images = dedupe_urls(assets["option_images"] + _extract_option_images(embedded))
+    live_verified = _is_live_browser_capture(provider, source_url)
     detail = ProductDetail(
         offer_id=offer_id,
         url=source_url or f"https://detail.1688.com/offer/{offer_id}.html",
@@ -453,7 +488,7 @@ def _build_detail_response(
         raw_source_summary={"provider": provider, "parser_version": PARSER_VERSION, "source_path": str(source_path) if source_path else None, "source_url": source_url},
         provider=provider,
         provider_version=PARSER_VERSION,
-        live_verified=True,
+        live_verified=live_verified,
         source_type=source_type,  # type: ignore[arg-type]
         fetched_at=datetime.now(timezone.utc),
         raw_reference_path=str(source_path) if source_path else None,
@@ -471,7 +506,7 @@ def _build_detail_response(
         provider=provider,
         provider_version=PARSER_VERSION,
         source_type=source_type,  # type: ignore[arg-type]
-        live_verified=True,
+        live_verified=live_verified,
         fetched_at=datetime.now(timezone.utc),
         missing_fields=missing,
         raw_reference_path=str(source_path) if source_path else None,
@@ -545,20 +580,35 @@ def parse_visible_page_snapshot(
     response = parse_rendered_html(html, source_url=source_url)
     response.provider = "chrome_devtools"
     response.source_type = "browser"
+    response.live_verified = _is_live_browser_capture("chrome_devtools", source_url)
     if response.item:
         response.item.provider = "chrome_devtools"
         response.item.source_type = "browser"
+        response.item.live_verified = response.live_verified
         response.item.raw_source_summary["provider"] = "chrome_devtools"
         response.item.raw_source_summary["source_kind"] = "visible_page_snapshot"
     return response
 
 
-def parse_network_payload(payload: str | dict | list, *, source_url: str | None = None, raw_reference_path: str | None = None) -> DetailResponse:
+def _decode_payload(payload: str) -> Any:
+    stripped = payload.strip()
     try:
-        data = json.loads(payload) if isinstance(payload, str) else payload
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        pass
+    match = re.match(r"^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\((.*)\)\s*;?$", stripped, flags=re.DOTALL)
+    if match:
+        return json.loads(match.group(1))
+    raise json.JSONDecodeError("Could not parse JSON or JSONP payload", stripped, 0)
+
+
+def parse_network_payload(payload: str | dict | list, *, source_url: str | None = None, raw_reference_path: str | None = None) -> DetailResponse:
+    live_verified = _is_live_browser_capture("chrome_devtools", source_url)
+    try:
+        data = _decode_payload(payload) if isinstance(payload, str) else payload
     except json.JSONDecodeError as exc:
         message = f"Could not parse captured 1688 network JSON: {exc}"
-        return DetailResponse(status="partial_data", message=message, error=structured_error("parse_network_payload_failed", message), provider="chrome_devtools", provider_version=PARSER_VERSION, source_type="browser", live_verified=True)
+        return DetailResponse(status="partial_data", message=message, error=structured_error("parse_network_payload_failed", message), provider="chrome_devtools", provider_version=PARSER_VERSION, source_type="browser", live_verified=live_verified)
 
     candidates: list[dict[str, Any]] = []
     if isinstance(data, dict):
@@ -568,7 +618,7 @@ def parse_network_payload(payload: str | dict | list, *, source_url: str | None 
     offer_id = str(embedded.get("offerId") or embedded.get("offer_id") or _dict(embedded.get("offerModel")).get("offerId") or _extract_offer_id("", None, source_url) or "")
     if not offer_id:
         message = "Could not extract 1688 offer_id from captured network payload."
-        return DetailResponse(status="partial_data", message=message, error=structured_error("invalid_offer_id", message), provider="chrome_devtools", provider_version=PARSER_VERSION, source_type="browser", live_verified=True)
+        return DetailResponse(status="partial_data", message=message, error=structured_error("invalid_offer_id", message), provider="chrome_devtools", provider_version=PARSER_VERSION, source_type="browser", live_verified=live_verified)
 
     main_images, detail_images, option_images = _extract_model_images(embedded)
     videos, video_metadata_seen = _extract_model_videos(embedded)

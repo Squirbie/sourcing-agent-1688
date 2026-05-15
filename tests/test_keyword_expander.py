@@ -29,6 +29,7 @@ def test_expands_requested_commerce_terms_without_placeholder():
         assert result.status == "ok"
         assert result.keywords == expected
         assert result.seed_terms == expected
+        assert result.search_urls
         assert not any("\u4e2d\u6587\u5173\u952e\u8bcd\u5019\u9009" in item for item in result.keywords)
 
 
@@ -62,3 +63,4 @@ def test_phone_component_does_not_force_stand_terms_for_other_products():
     assert "\u624b\u673a" in result.keywords
     assert "\u624b\u673a\u58f3" in result.keywords
     assert "\u624b\u673a\u652f\u67b6" not in result.keywords
+    assert any("s.1688.com" in url for url in result.search_urls)

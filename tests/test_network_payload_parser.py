@@ -64,6 +64,33 @@ def test_parse_1688_network_payload_reports_video_metadata_without_url():
     assert "network data" in response.warnings[0]
 
 
+def test_network_payload_parser_accepts_jsonp_wrapper():
+    response = parse_network_payload(
+        'mtopjsonp1({"data":{"offerId":"999888777","subject":"测试商品","priceInfo":{"price":"12.5"}}})',
+        source_url="https://detail.1688.com/offer/999888777.html",
+    )
+
+    assert response.status == "partial_data"
+    assert response.provider_version == "0.5.23"
+    assert response.live_verified is True
+    assert response.item.offer_id == "999888777"
+    assert response.item.price_tiers[0].price == 12.5
+
+
+def test_network_payload_failure_does_not_claim_live_for_non_1688_source():
+    response = parse_network_payload("not-json", source_url="https://example.com/page")
+
+    assert response.status == "partial_data"
+    assert response.live_verified is False
+
+
+def test_network_payload_failure_does_not_verify_lookalike_domain():
+    response = parse_network_payload("not-json", source_url="https://fake1688.com/page")
+
+    assert response.status == "partial_data"
+    assert response.live_verified is False
+
+
 def test_mcp_tool_list_includes_network_payload_parser():
     tool_names = {tool.name for tool in mcp._tool_manager.list_tools()}
 

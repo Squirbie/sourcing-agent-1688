@@ -45,6 +45,8 @@ def test_rendered_html_parser_accepts_source_url_for_chrome_captured_html():
     assert result.item.offer_id == "1018990720574"
     assert result.item.url == "https://detail.1688.com/offer/1018990720574.html"
     assert result.item.main_image_urls == ["https://cbu01.alicdn.com/img/ibank/O1CN-chrome-main.jpg"]
+    assert result.live_verified is False
+    assert result.item.live_verified is False
 
 
 def test_rendered_html_parser_extracts_1688_model_trade_and_seller_fields():
@@ -192,6 +194,56 @@ def test_rendered_html_parser_uses_visible_1688_text_when_json_is_sparse():
     assert detail.video_urls == ["https://cloud.video.taobao.com/play/u/2216180205720/p/2/e/6/t/1/494830060237.mp4"]
 
 
+def test_visible_page_snapshot_prefers_company_name_over_supplier_highlights():
+    body_text = "\n".join(
+        [
+            "供应商亮点",
+            "源头工厂20年|支持OEM/ODM|专利设计防泼水",
+            "跨境专供欧美|月产7万件起",
+            "加厚涤纶布旅游衣服收纳袋旅行用品套装束口鞋套整理六件套收纳包",
+            "¥41.00",
+            "2件起批",
+            "已售4600+件",
+            "浙江华彩箱包有限公司",
+            "店铺回头率62%",
+        ]
+    )
+
+    result = parse_visible_page_snapshot(
+        source_url="https://detail.1688.com/offer/755178864684.html",
+        title="加厚涤纶布旅游衣服收纳袋旅行用品套装束口鞋套整理六件套收纳包 - 阿里巴巴",
+        body_text=body_text,
+        media_urls=["https://cloud.video.taobao.com/play/u/2684580704/p/2/e/6/t/1/442197115990.mp4"],
+    )
+
+    assert result.provider == "chrome_devtools"
+    assert result.provider_version == "0.5.23"
+    assert result.live_verified is True
+    assert result.item.seller.name == "浙江华彩箱包有限公司"
+    assert result.item.video_urls == ["https://cloud.video.taobao.com/play/u/2684580704/p/2/e/6/t/1/442197115990.mp4"]
+
+
+def test_visible_page_snapshot_does_not_verify_lookalike_domain():
+    result = parse_visible_page_snapshot(
+        source_url="https://fake1688.com/offer/755178864684.html",
+        title="旅行收纳袋 - 阿里巴巴",
+        body_text="\n".join(
+            [
+                "旅行收纳袋",
+                "浙江华彩箱包有限公司",
+                "¥41.00",
+                "2件起批",
+                "已售4600+件",
+            ]
+        ),
+        media_urls=[],
+    )
+
+    assert result.live_verified is False
+    assert result.item is not None
+    assert result.item.live_verified is False
+
+
 def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
     body_text = "\n".join(
         [
@@ -230,6 +282,7 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
 
     assert result.provider == "chrome_devtools"
     assert detail.source_type == "browser"
+    assert result.provider_version == "0.5.23"
     assert detail.price_tiers[0].price == 25.0
     assert detail.trade_volume == 100
     assert detail.seller.name == "杜老汉（山东）生物科技有限公司"

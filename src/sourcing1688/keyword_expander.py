@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from sourcing1688.models import KeywordExpansion
+from sourcing1688.utils import encode_1688_search_keyword
 
 
 CURATED_SEEDS: dict[str, list[str]] = {
@@ -91,6 +92,10 @@ def _workflow() -> list[str]:
     ]
 
 
+def _search_urls(terms: list[str]) -> list[str]:
+    return [f"https://s.1688.com/selloffer/offer_search.htm?keywords={encode_1688_search_keyword(term)}" for term in terms]
+
+
 def _component_terms(normalized: str) -> list[str]:
     compact = normalized.replace(" ", "")
     terms: list[str] = []
@@ -127,6 +132,7 @@ def expand_keywords(keyword: str) -> KeywordExpansion:
             note="Chinese keyword supplied by the user. Search it directly, then refine from visible 1688 results.",
             agent_instruction=_agent_instruction(normalized, [normalized]),
             search_workflow=_workflow(),
+            search_urls=_search_urls([normalized]),
         )
 
     if normalized in CURATED_SEEDS:
@@ -141,6 +147,7 @@ def expand_keywords(keyword: str) -> KeywordExpansion:
             note="These are starter sourcing terms. Refine them from live 1688 search results before recommending products.",
             agent_instruction=_agent_instruction(normalized, seeds),
             search_workflow=_workflow(),
+            search_urls=_search_urls(seeds),
         )
 
     seeds = _component_terms(normalized)
@@ -155,6 +162,7 @@ def expand_keywords(keyword: str) -> KeywordExpansion:
             note="Only partial seed terms were inferred from Korean components. Generate better Chinese search terms and validate them on live 1688 results.",
             agent_instruction=_agent_instruction(normalized, seeds),
             search_workflow=_workflow(),
+            search_urls=_search_urls(seeds),
             warnings=["No exact curated term exists; use these only as hints."],
         )
 

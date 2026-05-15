@@ -26,9 +26,19 @@ from sourcing1688.storage import SourcingStorage
 from sourcing1688.utils import extract_offer_id, structured_error
 
 
+CHROME_DEVTOOLS_ALIASES = {"chrome", "chrome-devtools", "chrome_devtools", "devtools"}
+
+
+def normalize_provider_name(provider_name: str | None = None) -> str:
+    selected = (provider_name or get_settings().provider or "auto").lower()
+    if selected in CHROME_DEVTOOLS_ALIASES:
+        return "auto"
+    return selected
+
+
 def get_provider(provider_name: str | None = None) -> Base1688Provider:
     settings = get_settings()
-    selected = (provider_name or settings.provider or "auto").lower()
+    selected = normalize_provider_name(provider_name)
     if selected == "auto":
         return Auto1688Provider(settings=settings)
     if selected == "api":
@@ -61,7 +71,8 @@ def _missing_api_env(settings) -> list[str]:
 
 
 def check_provider(provider_name: str) -> dict[str, Any]:
-    selected = provider_name.lower()
+    requested = provider_name.lower()
+    selected = normalize_provider_name(requested)
     provider = get_provider(selected)
     capability = provider.capabilities()
     payload = capability.model_dump(mode="json")
@@ -137,6 +148,8 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     ).model_dump(mode="json"),
                 }
             )
+        if requested in CHROME_DEVTOOLS_ALIASES:
+            payload.update({"provider": "chrome-devtools", "selected_provider": "chrome-devtools", "requested_provider": requested})
     return payload
 
 
