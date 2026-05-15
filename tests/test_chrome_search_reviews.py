@@ -70,6 +70,40 @@ def test_search_results_snapshot_warns_when_fewer_than_minimum():
     assert payload["warnings"]
 
 
+def test_search_results_prefers_unit_bearing_sales_count_and_currency_price():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "title": "旅行收纳袋",
+                "url": "https://detail.1688.com/offer/800000000099.html",
+                "price_text": "¥2.50 2件起批",
+                "sold_text": "30天成交 1.2万件",
+            }
+        ],
+        cny_krw_rate=200,
+        min_items=1,
+    )
+
+    item = payload["items"][0]
+    assert item["sold_count"] == 12000
+    assert item["price_cny_min"] == 2.5
+    assert item["price_cny_max"] == 2.5
+
+
+def test_search_results_marks_non_1688_source_as_unverified():
+    payload = parse_search_results_snapshot(
+        keyword="旅行用品",
+        source_url="https://example.com/search",
+        items=[{"title": "旅行收纳袋", "url": "https://detail.1688.com/offer/800000000001.html"}],
+        min_items=1,
+    )
+
+    assert payload["live_verified"] is False
+    assert payload["capture_status"] == "unverified_source_url"
+
+
 def test_review_snapshot_extracts_tags_and_empty_review_state():
     payload = parse_review_snapshot(
         source_url="https://detail.1688.com/offer/755178864684.html",
@@ -100,3 +134,15 @@ def test_review_snapshot_extracts_tags_and_empty_review_state():
     assert payload["summary_tags"][0] == {"label_zh": "质量很好", "count": 51}
     assert any(signal["status"] == "system_error" for signal in payload["network_signals"])
     assert payload["warnings"]
+
+
+def test_review_snapshot_filters_ui_markers_and_unverified_source():
+    payload = parse_review_snapshot(
+        source_url="https://example.com/offer.html",
+        body_text="\n".join(["买家评价", "暂无有效评价", "这家包装很稳，发货也很快，下次还会回购"]),
+    )
+
+    assert payload["live_verified"] is False
+    assert payload["capture_status"] == "unverified_source_url"
+    assert payload["review_list_status"] == "available"
+    assert payload["review_texts"] == ["这家包装很稳，发货也很快，下次还会回购"]

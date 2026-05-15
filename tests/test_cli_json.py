@@ -35,6 +35,18 @@ def test_cli_search_json_with_auto_provider_does_not_launch_browser(monkeypatch,
     assert payload["items"] == []
 
 
+def test_cli_search_unknown_korean_keyword_includes_expansion_workflow(monkeypatch, tmp_path):
+    monkeypatch.setenv("SOURCING1688_PROVIDER", "auto")
+    monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path / "missing-home"))
+    result = runner.invoke(app, ["search", "\uc720\uc544\uc6a9 \ubb3c\ubcd1", "--json"])
+    payload = parse_json_output(result)
+
+    assert payload["status"] == "partial_data"
+    assert payload["keyword_expansion"]["strategy"] == "agent_generate_terms"
+    assert payload["keyword_expansion"]["search_workflow"]
+    assert payload["expanded_keywords"] == []
+
+
 def test_cli_failure_is_valid_json():
     result = runner.invoke(app, ["analyze-url", "not-a-valid-offer", "--json"])
     payload = json.loads(result.output)

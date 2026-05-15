@@ -27,7 +27,7 @@ class LocalHtml1688Provider(Base1688Provider):
             provider=self.name,
             provider_version=self.provider_version,
             source_type="local_html",
-            live_verified=True,
+            live_verified=False,
             detail=True,
             download_assets=True,
             parse_rendered_html=True,
@@ -43,13 +43,13 @@ class LocalHtml1688Provider(Base1688Provider):
         filters: dict[str, Any] | None = None,
     ) -> SearchResponse:
         message = "local_html provider only parses local rendered product detail HTML files."
-        return SearchResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=True)
+        return SearchResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=False)
 
     async def get_product_detail(self, offer_id_or_url: str) -> DetailResponse:
         path = Path(offer_id_or_url)
         if not path.exists():
             message = "local_html provider expects a path to a rendered HTML file."
-            return DetailResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=True)
+            return DetailResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=False)
         return parse_rendered_html_file(path)
 
     async def download_product_assets(
@@ -61,7 +61,7 @@ class LocalHtml1688Provider(Base1688Provider):
     ) -> AssetDownloadResponse:
         detail_response = await self.get_product_detail(offer_id_or_url)
         if detail_response.item is None:
-            return AssetDownloadResponse(status=detail_response.status, message=detail_response.message, error=detail_response.error, provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=True)
+            return AssetDownloadResponse(status=detail_response.status, message=detail_response.message, error=detail_response.error, provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=False)
         html_path = Path(offer_id_or_url)
         manifest = await download_assets(
             detail_response.item,
@@ -73,12 +73,12 @@ class LocalHtml1688Provider(Base1688Provider):
             parser_version=PARSER_VERSION,
             dry_run=dry_run,
         )
-        return AssetDownloadResponse(status=manifest.status, manifest=manifest, manifest_path=str(Path(manifest.saved_dir) / "manifest.json"), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=True)
+        return AssetDownloadResponse(status=manifest.status, manifest=manifest, manifest_path=str(Path(manifest.saved_dir) / "manifest.json"), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=False)
 
     async def get_hot_keywords(self, category_id: str | None = None, limit: int = 20) -> HotKeywordsResponse:
         message = "local_html provider does not provide hot keyword data."
-        return HotKeywordsResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=True)
+        return HotKeywordsResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=False)
 
     async def get_rankings(self, category_id: str | None = None, rank_type: str = "hot", limit: int = 20) -> RankingsResponse:
         message = "local_html provider does not provide ranking data."
-        return RankingsResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=True)
+        return RankingsResponse(status="provider_unavailable", message=message, error=structured_error("provider_unavailable", message), provider=self.name, provider_version=self.provider_version, source_type="local_html", live_verified=False)

@@ -179,6 +179,8 @@ async def search_sourcing_products(
             message="No built-in Chinese seed terms matched this Korean keyword. A Codex agent should generate Chinese 1688 sourcing terms from the user intent and then search live Chrome results.",
             suggested_action=expansion.agent_instruction,
             keyword=keyword,
+            expanded_keywords=expansion.keywords,
+            keyword_expansion=expansion,
             warnings=expansion.warnings,
             **_provider_metadata(provider),
         )
@@ -205,11 +207,24 @@ async def search_sourcing_products(
             break
     if not all_items and first_blocked:
         first_blocked.keyword = keyword
+        if expansion:
+            first_blocked.expanded_keywords = expansion.keywords
+            first_blocked.keyword_expansion = expansion
         return first_blocked
     if not all_items and first_empty_partial:
         first_empty_partial.keyword = keyword
+        if expansion:
+            first_empty_partial.expanded_keywords = expansion.keywords
+            first_empty_partial.keyword_expansion = expansion
         return first_empty_partial
-    return SearchResponse(status="ok", items=_dedupe_results(all_items)[:top], keyword=keyword, **_provider_metadata(provider))
+    return SearchResponse(
+        status="ok",
+        items=_dedupe_results(all_items)[:top],
+        keyword=keyword,
+        expanded_keywords=expansion.keywords if expansion else [],
+        keyword_expansion=expansion,
+        **_provider_metadata(provider),
+    )
 
 
 async def analyze_product_url(url: str, *, provider_name: str | None = None) -> dict[str, Any]:

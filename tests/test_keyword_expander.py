@@ -53,3 +53,12 @@ def test_component_keyword_is_hint_not_closed_mapping():
     assert "\u9732\u8425\u7528\u54c1" in result.keywords
     assert result.needs_review is True
     assert result.warnings
+
+
+def test_phone_component_does_not_force_stand_terms_for_other_products():
+    result = expand_keywords("\ud734\ub300\ud3f0 \ucf00\uc774\uc2a4")
+
+    assert result.status == "partial_data"
+    assert "\u624b\u673a" in result.keywords
+    assert "\u624b\u673a\u58f3" in result.keywords
+    assert "\u624b\u673a\u652f\u67b6" not in result.keywords

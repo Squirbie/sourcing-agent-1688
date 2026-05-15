@@ -4,6 +4,7 @@ import json
 import re
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 from sourcing1688 import __version__
 
@@ -26,17 +27,20 @@ REVIEW_TAG_TERMS = (
 
 REVIEW_UI_MARKERS = (
     "采购商评价",
+    "买家评价",
     "综合评价",
     "全部评价",
     "好评率",
     "有内容",
     "暂无更多评价",
     "暂无评价",
+    "暂无有效评价",
     "还没有评价",
     "暂无相关评价",
+    "未找到符合您筛选的记录",
 )
 
-EMPTY_REVIEW_MARKERS = ("暂无更多评价", "暂无评价", "还没有评价", "暂无相关评价")
+EMPTY_REVIEW_MARKERS = ("暂无更多评价", "暂无评价", "暂无有效评价", "还没有评价", "暂无相关评价", "未找到符合您筛选的记录")
 
 
 def _as_text(value: Any) -> str:
@@ -156,6 +160,14 @@ def _payload_signal(payload: str) -> dict[str, Any]:
     return signal
 
 
+def _is_1688_url(url: str) -> bool:
+    try:
+        host = urlparse(url).netloc.lower()
+    except ValueError:
+        return False
+    return host.endswith("1688.com") or host.endswith(".1688.com")
+
+
 def parse_review_snapshot(
     *,
     source_url: str,
@@ -175,6 +187,9 @@ def parse_review_snapshot(
         warnings.append("현재 화면에서 개별 리뷰 목록이 비어 있습니다.")
     if any(signal.get("status") == "system_error" for signal in signals):
         warnings.append("리뷰 목록 API 응답 중 system_error가 있어 Chrome 화면의 리뷰 요약과 다른 네트워크 응답을 함께 확인해야 합니다.")
+    is_1688_source = _is_1688_url(source_url)
+    if not is_1688_source:
+        warnings.append("Source URL is not a 1688 host, so this parser output is not marked as live 1688 data.")
 
     summary_has_data = any(value is not None for value in review_summary.values())
     status = "ok" if summary_has_data or summary_tags or review_texts else "partial_data"
@@ -184,7 +199,8 @@ def parse_review_snapshot(
         "provider": "chrome_devtools",
         "provider_version": __version__,
         "source_type": "browser",
-        "live_verified": True,
+        "live_verified": is_1688_source,
+        "capture_status": "browser_capture_1688_url" if is_1688_source else "unverified_source_url",
         "source_url": source_url,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "review_summary": review_summary,

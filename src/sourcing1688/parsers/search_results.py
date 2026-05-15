@@ -46,20 +46,34 @@ def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def parse_chinese_count(value: str) -> int | None:
     text = value.replace(",", "").replace("＋", "+").strip()
-    match = re.search(r"(\d+(?:\.\d+)?)", text)
+    patterns = [
+        r"(?:成交|已售|销量|售出|卖出|全网)\s*([0-9]+(?:\.[0-9]+)?)(万|千)?\+?\s*件?",
+        r"([0-9]+(?:\.[0-9]+)?)(万|千)\+?\s*(?:件|单|人)?",
+        r"(\d+(?:\.\d+)?)",
+    ]
+    match = None
+    unit = ""
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            unit = match.group(2) if len(match.groups()) >= 2 and match.group(2) else ""
+            break
     if not match:
         return None
     number = float(match.group(1))
-    if "万" in text:
+    if unit == "万":
         number *= 10000
-    elif "千" in text:
+    elif unit == "千":
         number *= 1000
     return int(number)
 
 
 def _extract_price_range(*values: Any) -> tuple[float | None, float | None]:
     text = " ".join(_as_text(value) for value in values if value is not None)
-    numbers = [float(item) for item in re.findall(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", text)]
+    currency_numbers = re.findall(r"(?:¥|￥|CNY|RMB)\s*(\d+(?:\.\d+)?)", text, flags=re.IGNORECASE)
+    currency_numbers.extend(re.findall(r"(\d+(?:\.\d+)?)\s*元", text))
+    source_numbers = currency_numbers or re.findall(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", text)
+    numbers = [float(item) for item in source_numbers]
     useful = [number for number in numbers if number >= 0.01]
     if not useful:
         return None, None
@@ -86,6 +100,14 @@ def _canonical_url(url: str, offer_id: str | None) -> str | None:
     if offer_id:
         return f"https://detail.1688.com/offer/{offer_id}.html"
     return url or None
+
+
+def _is_1688_url(url: str) -> bool:
+    try:
+        host = urlparse(url).netloc.lower()
+    except ValueError:
+        return False
+    return host.endswith("1688.com") or host.endswith(".1688.com")
 
 
 def _extract_repurchase_rate(*values: Any) -> float | None:
@@ -223,12 +245,16 @@ def parse_search_results_snapshot(
     warnings: list[str] = []
     if len(normalized) < min_items:
         warnings.append(f"Visible search snapshot contained {len(normalized)} candidates; expected at least {min_items}. Scroll/load more results and capture again.")
+    is_1688_source = _is_1688_url(source_url)
+    if not is_1688_source:
+        warnings.append("Source URL is not a 1688 host, so this parser output is not marked as live 1688 data.")
     return {
         "status": "ok" if normalized else "partial_data",
         "provider": "chrome_devtools",
         "provider_version": __version__,
         "source_type": "browser",
-        "live_verified": True,
+        "live_verified": is_1688_source,
+        "capture_status": "browser_capture_1688_url" if is_1688_source else "unverified_source_url",
         "keyword": keyword,
         "source_url": source_url,
         "fetched_at": datetime.now(timezone.utc).isoformat(),

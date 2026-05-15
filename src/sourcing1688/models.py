@@ -222,6 +222,8 @@ class SourcingScore(JsonModel):
 class SearchResponse(StatusResponse):
     items: list[ProductSearchResult] = Field(default_factory=list)
     keyword: str | None = None
+    expanded_keywords: list[str] = Field(default_factory=list)
+    keyword_expansion: KeywordExpansion | None = None
 
 
 class DetailResponse(StatusResponse):
