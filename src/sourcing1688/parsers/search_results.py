@@ -1,0 +1,195 @@
+from __future__ import annotations
+
+import os
+import re
+from datetime import datetime, timezone
+from typing import Any
+from urllib.parse import urlparse
+
+from sourcing1688.utils import extract_offer_id
+
+
+DEFAULT_CNY_KRW_RATE = 190.0
+
+
+def _as_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    output: list[dict[str, Any]] = []
+    for item in items:
+        key = item.get("offer_id") or item.get("url") or item.get("title_zh")
+        if not key or key in seen:
+            continue
+        seen.add(str(key))
+        output.append(item)
+    return output
+
+
+def parse_chinese_count(value: str) -> int | None:
+    text = value.replace(",", "").replace("＋", "+").strip()
+    match = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not match:
+        return None
+    number = float(match.group(1))
+    if "万" in text:
+        number *= 10000
+    elif "千" in text:
+        number *= 1000
+    return int(number)
+
+
+def _extract_price_range(*values: Any) -> tuple[float | None, float | None]:
+    text = " ".join(_as_text(value) for value in values if value is not None)
+    numbers = [float(item) for item in re.findall(r"(?<!\d)(\d+(?:\.\d+)?)(?!\d)", text)]
+    if not numbers:
+        return None, None
+    useful = [number for number in numbers if number >= 0.01]
+    if not useful:
+        return None, None
+    if len(useful) == 1:
+        return useful[0], useful[0]
+    return min(useful[:4]), max(useful[:4])
+
+
+def _extract_offer_id(url: str) -> str | None:
+    if not url:
+        return None
+    try:
+        return extract_offer_id(url)
+    except ValueError:
+        pass
+    parsed = urlparse(url)
+    for value in [parsed.path, parsed.query, url]:
+        if match := re.search(r"(\d{9,})", value):
+            return match.group(1)
+    return None
+
+
+def _krw(value: float | None, rate: float) -> int | None:
+    return int(round(value * rate)) if value is not None else None
+
+
+def _ko_summary(title: str, keyword: str) -> str:
+    source = f"{keyword} {title}"
+    rules = [
+        (("旅行", "旅游", "行李", "护照", "洗漱", "收纳", "分装", "便携", "出差"), "여행용 수납/휴대 편의용품"),
+        (("手机支架", "手机架", "自拍杆", "车载", "桌面支架"), "휴대폰 거치대/촬영 보조용품"),
+        (("雨伞", "遮阳伞", "防晒伞", "黑胶伞"), "자외선 차단/암막 우산"),
+        (("宠物", "猫", "狗", "牵引", "玩偶"), "반려동물 용품"),
+        (("球衣", "足球服", "运动", "跑步"), "스포츠/운동용품"),
+        (("包装", "纸袋", "食品袋"), "포장/배송 소모품"),
+    ]
+    for terms, summary in rules:
+        if any(term in source for term in terms):
+            return summary
+    return "1688 상품 후보"
+
+
+def _why_candidate(title: str, sold_count: int | None, price_min: float | None, seller: str, badges: list[str]) -> list[str]:
+    notes: list[str] = []
+    if sold_count and sold_count >= 10000:
+        notes.append("판매량 표시가 높아 수요 확인용 후보로 볼 수 있습니다.")
+    elif sold_count and sold_count >= 1000:
+        notes.append("판매량이 어느 정도 보여 테스트 후보로 볼 수 있습니다.")
+    if price_min is not None and price_min <= 10:
+        notes.append("낮은 단가대라 샘플 테스트와 마진 검토가 쉽습니다.")
+    elif price_min is not None:
+        notes.append("표시 가격 기준으로 원가 범위를 바로 비교할 수 있습니다.")
+    if seller:
+        notes.append("판매자명이 확인되어 상점 상세 검증으로 이어갈 수 있습니다.")
+    if badges:
+        notes.append("검색 카드에 배지/판매 신호가 일부 노출됩니다.")
+    if not notes:
+        notes.append("검색 결과에 노출된 상품으로 상세페이지 검증이 필요합니다.")
+    return notes
+
+
+def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float) -> dict[str, Any] | None:
+    title = _as_text(raw.get("title") or raw.get("title_zh") or raw.get("name"))
+    url = _as_text(raw.get("url") or raw.get("href") or raw.get("product_url"))
+    if not title and not url:
+        return None
+    offer_id = _as_text(raw.get("offer_id")) or _extract_offer_id(url)
+    price_text = _as_text(raw.get("price_text") or raw.get("price") or raw.get("price_cny"))
+    sold_text = _as_text(raw.get("sold_text") or raw.get("sales_text") or raw.get("month_sold_text") or raw.get("trade_text"))
+    seller = _as_text(raw.get("seller_name") or raw.get("seller") or raw.get("shop_name"))
+    image_url = _as_text(raw.get("image_url") or raw.get("image") or raw.get("img"))
+    badges = raw.get("badges") if isinstance(raw.get("badges"), list) else []
+    badges = [_as_text(badge) for badge in badges if _as_text(badge)]
+    price_min, price_max = _extract_price_range(raw.get("price_cny_min"), raw.get("price_cny_max"), price_text)
+    sold_count = parse_chinese_count(sold_text)
+    return {
+        "rank": rank,
+        "offer_id": offer_id or None,
+        "url": url or (f"https://detail.1688.com/offer/{offer_id}.html" if offer_id else None),
+        "title_zh": title or None,
+        "title_ko_summary": _ko_summary(title, keyword),
+        "image_url": image_url or None,
+        "price_text": price_text or None,
+        "price_cny_min": price_min,
+        "price_cny_max": price_max,
+        "price_krw_min": _krw(price_min, rate),
+        "price_krw_max": _krw(price_max, rate),
+        "sold_text": sold_text or None,
+        "sold_count": sold_count,
+        "seller_name": seller or None,
+        "badges": badges,
+        "why_candidate": _why_candidate(title, sold_count, price_min, seller, badges),
+        "next_check": [
+            "상세페이지에서 MOQ, 옵션, 배송 가능 수량을 확인하세요.",
+            "리뷰/재구매율/상점 점수를 확인한 뒤 샘플 발주 여부를 판단하세요.",
+        ],
+    }
+
+
+def _rate_from_env() -> tuple[float, str]:
+    raw = os.environ.get("SOURCING1688_CNY_KRW_RATE")
+    if raw:
+        try:
+            return float(raw), "env:SOURCING1688_CNY_KRW_RATE"
+        except ValueError:
+            pass
+    return DEFAULT_CNY_KRW_RATE, "default_estimate"
+
+
+def parse_search_results_snapshot(
+    *,
+    keyword: str,
+    source_url: str,
+    items: list[dict[str, Any]],
+    cny_krw_rate: float | None = None,
+    min_items: int = 10,
+) -> dict[str, Any]:
+    rate, rate_source = (float(cny_krw_rate), "provided") if cny_krw_rate is not None else _rate_from_env()
+    normalized: list[dict[str, Any]] = []
+    for raw in items:
+        if not isinstance(raw, dict):
+            continue
+        if item := _normalize_item(raw, rank=len(normalized) + 1, keyword=keyword, rate=rate):
+            normalized.append(item)
+    normalized = _dedupe(normalized)
+    for index, item in enumerate(normalized, start=1):
+        item["rank"] = index
+    warnings: list[str] = []
+    if len(normalized) < min_items:
+        warnings.append(f"Visible search snapshot contained {len(normalized)} candidates; expected at least {min_items}. Scroll/load more results and capture again.")
+    return {
+        "status": "ok" if normalized else "partial_data",
+        "provider": "chrome_devtools",
+        "provider_version": "0.5.18",
+        "source_type": "browser",
+        "live_verified": True,
+        "keyword": keyword,
+        "source_url": source_url,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(normalized),
+        "minimum_expected": min_items,
+        "cny_krw_rate": rate,
+        "rate_source": rate_source,
+        "currency_note": "KRW prices are estimates from the supplied or configured CNY/KRW rate.",
+        "items": normalized,
+        "warnings": warnings,
+    }

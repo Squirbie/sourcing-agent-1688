@@ -8,11 +8,13 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from sourcing1688.browser_profile import open_browser_profile
-from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command
+from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command, mark_chrome_setup_opened, read_chrome_setup_marker
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.assets.downloader import download_assets as download_parsed_assets
 from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_network_payload, parse_rendered_html, parse_rendered_html_file, parse_visible_page_snapshot
+from sourcing1688.parsers.reviews import parse_review_snapshot
+from sourcing1688.parsers.search_results import parse_search_results_snapshot
 from sourcing1688.services import (
     analyze_product_url,
     check_provider,
@@ -253,8 +255,21 @@ async def open_1688_browser_profile(url: str = "https://www.1688.com") -> dict[s
 
 
 @mcp.tool()
-def open_chrome_devtools_setup() -> dict[str, Any]:
-    """Open Chrome pages needed for first-run DevTools MCP auto-connect setup."""
+def open_chrome_devtools_setup(force: bool = False) -> dict[str, Any]:
+    """Open the Chrome DevTools setup page only when first-run setup has not already been recorded."""
+    marker = read_chrome_setup_marker()
+    if marker and not force:
+        return {
+            "status": "ok",
+            "skipped": True,
+            "opened": [],
+            "marker": marker,
+            "message": "Chrome DevTools setup was already opened for this SOURCING1688_HOME.",
+            "next_steps": [
+                "Use Chrome DevTools tools against the existing Chrome tabs.",
+                "Only call open_chrome_devtools_setup(force=true) if the user wants to re-open the Chrome setup page.",
+            ],
+        }
     try:
         command = chrome_devtools_setup_command()
         completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
@@ -265,10 +280,13 @@ def open_chrome_devtools_setup() -> dict[str, Any]:
             status="provider_unavailable",
             suggested_action=f"Open {CHROME_DEVTOOLS_SETUP_URL} in Chrome, enable the local debugging connection, then open the 1688 page again.",
         )
+    marker = mark_chrome_setup_opened(command=command)
     return {
         "status": "ok",
+        "skipped": False,
         "opened": [CHROME_DEVTOOLS_SETUP_URL],
         "command": command,
+        "marker": marker,
         "returncode": completed.returncode,
         "stderr": completed.stderr.strip(),
         "next_steps": [
@@ -277,6 +295,42 @@ def open_chrome_devtools_setup() -> dict[str, Any]:
             "If chrome-devtools failed earlier in this Codex session, restart Codex or open a new chat after enabling the Chrome connection.",
         ],
     }
+
+
+@mcp.tool()
+def parse_1688_review_snapshot(
+    source_url: str,
+    body_text: str = "",
+    network_payloads: list[str] | None = None,
+) -> dict[str, Any]:
+    """Parse review tags, review-list state, and review-related network responses captured from Chrome."""
+    if not source_url.strip():
+        return error_payload("invalid_offer_id", "source_url is required.")
+    return jsonable(parse_review_snapshot(source_url=source_url, body_text=body_text, network_payloads=network_payloads or []))
+
+
+@mcp.tool()
+def parse_1688_search_results_snapshot(
+    keyword: str,
+    source_url: str,
+    items: list[dict[str, Any]],
+    cny_krw_rate: float | None = None,
+    min_items: int = 10,
+) -> dict[str, Any]:
+    """Normalize visible 1688 search cards into Korean seller-facing candidate summaries with KRW estimates."""
+    if not keyword.strip():
+        return error_payload("invalid_keyword", "keyword is required.")
+    if not source_url.strip():
+        return error_payload("invalid_source_url", "source_url is required.")
+    return jsonable(
+        parse_search_results_snapshot(
+            keyword=keyword,
+            source_url=source_url,
+            items=items,
+            cny_krw_rate=cny_krw_rate,
+            min_items=min_items,
+        )
+    )
 
 
 @mcp.tool()

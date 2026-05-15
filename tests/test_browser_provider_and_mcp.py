@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sourcing1688 import mcp_server
+from sourcing1688 import chrome_setup, mcp_server
 from sourcing1688.mcp_server import mcp
 from sourcing1688.providers.browser_provider import Browser1688Provider
 
@@ -60,9 +60,11 @@ def test_mcp_server_registers_expected_tools():
     assert "check_1688_browser_profile" in tool_names
     assert "open_1688_browser_profile" in tool_names
     assert "open_chrome_devtools_setup" in tool_names
+    assert "parse_1688_review_snapshot" in tool_names
+    assert "parse_1688_search_results_snapshot" in tool_names
 
 
-def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch):
+def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch, tmp_path):
     calls = []
 
     class MockCompleted:
@@ -74,11 +76,48 @@ def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch):
         return MockCompleted()
 
     monkeypatch.setattr(mcp_server.subprocess, "run", mock_run)
-    monkeypatch.setattr(mcp_server.sys, "platform", "win32")
+    monkeypatch.setattr(chrome_setup.sys, "platform", "win32")
+    monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path))
 
     payload = mcp_server.open_chrome_devtools_setup()
 
     assert payload["status"] == "ok"
+    assert payload["skipped"] is False
     assert payload["returncode"] == 0
     assert any("chrome://inspect/#remote-debugging" in " ".join(call) for call in calls)
     assert not any("https://www.1688.com" in " ".join(call) for call in calls)
+    assert (tmp_path / "config" / "chrome-devtools-setup.json").exists()
+
+
+def test_open_chrome_devtools_setup_skips_after_marker(monkeypatch, tmp_path):
+    marker = chrome_setup.mark_chrome_setup_opened(tmp_path, command=["already-opened"])
+    calls = []
+
+    def mock_run(args, **kwargs):
+        calls.append(args)
+        raise AssertionError("setup command should not run when marker exists")
+
+    monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path))
+    monkeypatch.setattr(mcp_server.subprocess, "run", mock_run)
+
+    payload = mcp_server.open_chrome_devtools_setup()
+
+    assert payload["status"] == "ok"
+    assert payload["skipped"] is True
+    assert payload["opened"] == []
+    assert payload["marker"]["path"] == marker["path"]
+    assert calls == []
+
+
+def test_windows_chrome_setup_command_preserves_window_state(monkeypatch):
+    monkeypatch.setattr(chrome_setup.sys, "platform", "win32")
+    monkeypatch.setattr(chrome_setup, "find_chrome_executable", lambda: "C:/Program Files/Google/Chrome/Application/chrome.exe")
+
+    command = chrome_setup.chrome_devtools_setup_command()
+    script = command[-1]
+
+    assert "--new-tab" in script
+    assert "chrome://inspect/#remote-debugging" in script
+    assert "ShowWindowAsync" not in script
+    assert "SetForegroundWindow" not in script
+    assert "about:blank" not in script

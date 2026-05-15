@@ -15,10 +15,11 @@ def test_windows_chrome_setup_uses_chrome_exe_directly(monkeypatch, tmp_path):
     assert command[:4] == ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass"]
     assert str(chrome) in command[-1]
     assert chrome_setup.CHROME_DEVTOOLS_SETUP_URL in command[-1]
-    assert "UIAutomationClient" in command[-1]
-    assert "ValuePattern" in command[-1]
-    assert "about:blank" in command[-1]
-    assert "keybd_event" in command[-1]
+    assert "--new-tab" in command[-1]
+    assert "UIAutomationClient" not in command[-1]
+    assert "ValuePattern" not in command[-1]
+    assert "about:blank" not in command[-1]
+    assert "keybd_event" not in command[-1]
     assert "cmd" not in command
 
 

@@ -18,13 +18,19 @@ Do not run synthetic fixture, demo, or parser self-tests during a user sourcing 
 
 ## First-Run Chrome Setup
 
-If Chrome DevTools cannot connect, has no pages, or reports `DevToolsActivePort`:
+Before calling `open_chrome_devtools_setup`, retry `chrome-devtools/list_pages` once. Call setup only when Chrome DevTools still cannot connect, has no pages, or reports `DevToolsActivePort`.
+
+If setup is needed:
 
 1. Call `open_chrome_devtools_setup`.
-2. Tell the user that the Chrome setup tab was opened.
-3. Ask the user to allow the Chrome DevTools connection in the opened Chrome settings page.
-4. Ask the user to open the target 1688 page in that same Chrome profile.
-5. Stop there until the user confirms setup is done or provides the target page.
+2. If the tool returns `skipped: true`, do not open the setup page again. Continue with existing Chrome tabs or tell the user setup was already opened.
+3. Tell the user that the Chrome setup tab was opened only when `opened` is non-empty.
+4. Ask the user to allow the Chrome DevTools connection in the opened Chrome settings page.
+5. Ask the user to open the target 1688 page in that same Chrome profile.
+6. Stop there until the user confirms setup is done or provides the target page.
+
+Do not repeatedly open `chrome://inspect/#remote-debugging` after setup was already opened.
+Do not resize, reposition, minimize, or maximize the user's Chrome windows.
 
 If a Chrome DevTools tool call times out during first connection, do not call it a parser bug or a 1688 failure. Treat it as a pending Chrome permission dialog, tell the user to click Allow if the dialog is visible, then retry the same Chrome DevTools call after the user confirms. The bundled MCP config gives Chrome DevTools a long tool timeout so the user has time to notice and approve the prompt.
 
@@ -39,7 +45,8 @@ When the user gives a 1688 product URL or asks about the current Chrome page:
 5. If more data is needed, capture rendered HTML and call `parse_1688_rendered_html_content`.
 6. Use `list_network_requests` and `get_network_request` for relevant 1688 responses.
 7. Pass useful JSON bodies to `parse_1688_network_payload_content`.
-8. Summarize product fit for a Korean seller: product type, price, options, seller signals, visible demand signals, image/video assets, risks, and next buying checks.
+8. For reviews, click/open the buyer review area (`买家评价`) when visible, capture body text plus review-related network responses, then call `parse_1688_review_snapshot`.
+9. Summarize product fit for a Korean seller: product type, price in CNY and estimated KRW when a rate is available, options, seller signals, visible demand signals, review tags, image/video assets, risks, and next buying checks.
 
 ## Search
 
@@ -48,7 +55,10 @@ When the user asks for sourcing candidates:
 1. Call `expand_sourcing_keywords`.
 2. Use Chrome DevTools to search 1688 with the Chinese keywords. For `s.1688.com` search URLs, GBK-percent-encode Chinese keywords; UTF-8 encoded Chinese keywords can render as broken text and return unrelated results.
 3. Inspect visible results and network responses.
-4. Compare candidates using price, MOQ if visible, seller signals, assets, and page quality.
+4. Capture at least 10 visible candidate cards unless the user asks for fewer or the page has fewer visible results. Scroll/load more before giving up at 3-5 items.
+5. Capture product card fields with `evaluate_script`: title, URL, price text, sold text, seller/shop name, image URL, and visible badges.
+6. Call `parse_1688_search_results_snapshot` with the captured items. Pass a current or user-provided CNY/KRW rate when available.
+7. Present the result in Korean with product explanation, CNY price, estimated KRW price, sold count, seller/shop, why it may be a candidate, and what to check next.
 
 ## Save Assets
 

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
 CHROME_DEVTOOLS_SETUP_URL = "chrome://inspect/#remote-debugging"
+SETUP_MARKER_RELATIVE_PATH = Path("config") / "chrome-devtools-setup.json"
 
 
 def _candidate_chrome_paths() -> list[Path]:
@@ -54,23 +58,38 @@ def _windows_focus_chrome_setup_script(chrome_command: str) -> str:
             "$ErrorActionPreference = 'SilentlyContinue'",
             f"$chrome = {chrome}",
             f"$url = {url}",
-            "Start-Process -FilePath $chrome -ArgumentList @('--new-tab', 'about:blank') | Out-Null",
-            "Start-Sleep -Milliseconds 1000",
-            "Add-Type -AssemblyName UIAutomationClient",
-            "Add-Type -AssemblyName UIAutomationTypes",
-            "Add-Type 'using System; using System.Runtime.InteropServices; public class S1688Win32 { [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport(\"user32.dll\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\"user32.dll\")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo); }'",
-            "$proc = Get-Process chrome | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1",
-            "[S1688Win32]::ShowWindowAsync($proc.MainWindowHandle, 9) | Out-Null",
-            "[S1688Win32]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null",
-            "$root = [System.Windows.Automation.AutomationElement]::FromHandle($proc.MainWindowHandle)",
-            "$condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)",
-            "$addressBar = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)",
-            "$addressBar.SetFocus()",
-            "$valuePattern = $addressBar.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)",
-            "$valuePattern.SetValue($url)",
-            "Start-Sleep -Milliseconds 200",
-            "[S1688Win32]::keybd_event(0x0D, 0, 0, [UIntPtr]::Zero)",
-            "Start-Sleep -Milliseconds 50",
-            "[S1688Win32]::keybd_event(0x0D, 0, 2, [UIntPtr]::Zero)",
+            "Start-Process -FilePath $chrome -ArgumentList @('--new-tab', $url) | Out-Null",
         ]
     )
+
+
+def chrome_setup_marker_path(home: str | Path | None = None) -> Path:
+    root = Path(home) if home else Path(os.environ.get("SOURCING1688_HOME") or Path.home() / ".sourcing1688")
+    return root / SETUP_MARKER_RELATIVE_PATH
+
+
+def read_chrome_setup_marker(home: str | Path | None = None) -> dict[str, Any] | None:
+    path = chrome_setup_marker_path(home)
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    data.setdefault("path", str(path))
+    return data
+
+
+def mark_chrome_setup_opened(home: str | Path | None = None, *, command: list[str] | None = None) -> dict[str, Any]:
+    path = chrome_setup_marker_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "status": "opened",
+        "url": CHROME_DEVTOOLS_SETUP_URL,
+        "opened_at": datetime.now(timezone.utc).isoformat(),
+        "command": command or chrome_devtools_setup_command(),
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"path": str(path), **payload}

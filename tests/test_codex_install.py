@@ -102,6 +102,25 @@ def test_global_mcp_cleanup_removes_legacy_servers(monkeypatch):
     assert not any(command[:3] == ["codex", "mcp", "add"] for command in commands)
 
 
+def test_open_chrome_setup_page_skips_when_marker_exists(monkeypatch, tmp_path):
+    monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path))
+    marker = codex_install.mark_chrome_setup_opened(tmp_path, command=["already-opened"])
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        return Completed()
+
+    monkeypatch.setattr(codex_install.subprocess, "run", fake_run)
+
+    payload = codex_install._open_chrome_setup_page()
+
+    assert payload["ok"] is True
+    assert payload["skipped"] is True
+    assert payload["marker"]["path"] == marker["path"]
+    assert calls == []
+
+
 def test_uninstall_codex_cli_json_can_be_mocked(monkeypatch):
     monkeypatch.setattr("sourcing1688.cli.uninstall_codex", lambda remove_runtime=False: {"status": "ok", "remove_runtime": remove_runtime})
 

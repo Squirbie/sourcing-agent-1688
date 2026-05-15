@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command
+from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command, mark_chrome_setup_opened, read_chrome_setup_marker
 
 
 REPO_URL = "https://github.com/Squirbie/sourcing-agent-1688.git"
@@ -148,6 +148,14 @@ def _clear_plugin_cache(home: Path) -> dict[str, Any]:
 
 
 def _open_chrome_setup_page() -> dict[str, Any]:
+    marker = read_chrome_setup_marker()
+    if marker:
+        return {
+            "url": CHROME_DEVTOOLS_SETUP_URL,
+            "ok": True,
+            "skipped": True,
+            "marker": marker,
+        }
     command = chrome_devtools_setup_command()
     try:
         completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
@@ -159,6 +167,8 @@ def _open_chrome_setup_page() -> dict[str, Any]:
         "url": CHROME_DEVTOOLS_SETUP_URL,
         "command": command,
         "ok": completed.returncode == 0,
+        "skipped": False,
+        "marker": mark_chrome_setup_opened(command=command) if completed.returncode == 0 else None,
         "returncode": completed.returncode,
         "stderr": completed.stderr.strip(),
     }
