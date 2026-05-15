@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlparse
 
+from sourcing1688 import __version__
 from sourcing1688.utils import extract_offer_id
 
 
@@ -179,7 +180,7 @@ def parse_search_results_snapshot(
     return {
         "status": "ok" if normalized else "partial_data",
         "provider": "chrome_devtools",
-        "provider_version": "0.5.18",
+        "provider_version": __version__,
         "source_type": "browser",
         "live_verified": True,
         "keyword": keyword,

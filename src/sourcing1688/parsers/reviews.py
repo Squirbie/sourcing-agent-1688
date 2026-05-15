@@ -5,6 +5,8 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from sourcing1688 import __version__
+
 
 REVIEW_TAG_TERMS = (
     "价格",
@@ -75,6 +77,28 @@ def _extract_review_texts(text: str) -> list[str]:
     return list(dict.fromkeys(reviews))[:20]
 
 
+def _extract_review_summary(text: str) -> dict[str, Any]:
+    normalized = re.sub(r"\s+", " ", text)
+    score = None
+    review_count_text = None
+    positive_rate = None
+    content_review_count_text = None
+    if match := re.search(r"商品评价\s+([0-9](?:\.[0-9])?)", normalized):
+        score = float(match.group(1))
+    if match := re.search(r"([0-9]+(?:\.[0-9]+)?万?\+?)\s*条评价", normalized):
+        review_count_text = match.group(1)
+    if match := re.search(r"好评率\s*([0-9]+(?:\.[0-9]+)?)\s*%", normalized):
+        positive_rate = float(match.group(1)) / 100
+    if match := re.search(r"有内容\s*([0-9]+(?:\.[0-9]+)?万?\+?)", normalized):
+        content_review_count_text = match.group(1)
+    return {
+        "score": score,
+        "review_count_text": review_count_text,
+        "positive_rate": positive_rate,
+        "content_review_count_text": content_review_count_text,
+    }
+
+
 def _payload_signal(payload: str) -> dict[str, Any]:
     signal: dict[str, Any] = {
         "service": None,
@@ -121,6 +145,7 @@ def parse_review_snapshot(
     network_payloads: list[str] | None = None,
 ) -> dict[str, Any]:
     text = _as_text(body_text)
+    review_summary = _extract_review_summary(text)
     summary_tags = _extract_summary_tags(text)
     review_texts = _extract_review_texts(text)
     empty_markers = [marker for marker in ["暂无有效评价", "未找到符合您筛选的记录"] if marker in text]
@@ -133,16 +158,18 @@ def parse_review_snapshot(
     if any(signal.get("status") == "system_error" for signal in signals):
         warnings.append("리뷰 목록 API 응답 중 system_error가 있어 Chrome 화면 기준 태그와 다른 네트워크 응답을 함께 확인해야 합니다.")
 
-    status = "ok" if summary_tags or review_texts else "partial_data"
+    summary_has_data = any(value is not None for value in review_summary.values())
+    status = "ok" if summary_has_data or summary_tags or review_texts else "partial_data"
     review_list_status = "available" if review_texts else ("empty" if empty_markers else "unknown")
     return {
         "status": status,
         "provider": "chrome_devtools",
-        "provider_version": "0.5.18",
+        "provider_version": __version__,
         "source_type": "browser",
         "live_verified": True,
         "source_url": source_url,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "review_summary": review_summary,
         "summary_tags": summary_tags,
         "review_texts": review_texts,
         "review_list_status": review_list_status,

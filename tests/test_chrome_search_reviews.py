@@ -54,6 +54,11 @@ def test_review_snapshot_extracts_tags_and_empty_review_state():
                 "质量不错 45",
                 "性价比超高 32",
                 "发货快 29",
+                "商品评价",
+                "5.0",
+                "100+条评价",
+                "好评率 100%",
+                "有内容 9",
                 "暂无有效评价",
             ]
         ),
@@ -62,6 +67,10 @@ def test_review_snapshot_extracts_tags_and_empty_review_state():
 
     assert payload["status"] == "ok"
     assert payload["review_list_status"] == "empty"
+    assert payload["review_summary"]["score"] == 5.0
+    assert payload["review_summary"]["review_count_text"] == "100+"
+    assert payload["review_summary"]["positive_rate"] == 1.0
+    assert payload["review_summary"]["content_review_count_text"] == "9"
     assert payload["summary_tags"][0] == {"label_zh": "价格很实惠", "count": 51}
     assert any(signal["status"] == "system_error" for signal in payload["network_signals"])
     assert payload["warnings"]
