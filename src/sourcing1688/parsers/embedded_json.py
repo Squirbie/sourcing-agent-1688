@@ -11,21 +11,38 @@ INTERESTING_KEYS = {
     "offerId",
     "offer_id",
     "subject",
+    "price",
+    "priceInfo",
     "priceRange",
+    "priceRanges",
     "skuOptions",
     "monthSold",
+    "saleCount",
+    "beginAmount",
     "offerModel",
+    "sellerDataInfo",
+    "shopInfo",
+    "companyInfo",
+    "memberModel",
     "sellerModel",
     "skuModel",
     "tradeModel",
+    "imageList",
+    "images",
 }
 
 BALANCED_VALUE_KEYS = [
     "globalData",
     "offerModel",
+    "sellerDataInfo",
+    "shopInfo",
+    "companyInfo",
+    "memberModel",
     "sellerModel",
     "skuModel",
     "tradeModel",
+    "imageList",
+    "images",
 ]
 
 
@@ -117,7 +134,17 @@ def extract_embedded_json_candidates(soup: BeautifulSoup, html: str) -> list[dic
                 continue
             except json.JSONDecodeError:
                 pass
-        for match in re.finditer(r"\{[^{}]*(?:offerId|offer_id|subject|priceRange|skuOptions|monthSold)[\s\S]*?\}", text):
+        for match in re.finditer(r"(?:window\.)?[A-Za-z0-9_$]+\s*=\s*[\{\[]", text):
+            value_start = text.find(match.group(0).rstrip()[-1], match.start())
+            raw = _balanced_json_slice(text, value_start)
+            if not raw:
+                continue
+            try:
+                candidates.extend(_walk_json(json.loads(raw)))
+            except json.JSONDecodeError:
+                continue
+        interesting_pattern = "|".join(re.escape(key) for key in INTERESTING_KEYS)
+        for match in re.finditer(r"\{[^{}]*(?:" + interesting_pattern + r")[\s\S]*?\}", text):
             raw = match.group(0)
             try:
                 candidates.extend(_walk_json(json.loads(raw)))

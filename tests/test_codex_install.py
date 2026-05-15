@@ -21,7 +21,7 @@ def write_marketplace_bundle(home: Path) -> None:
     plugin_dir = home / ".tmp" / "marketplaces" / codex_install.MARKETPLACE_NAME / "plugins" / codex_install.PLUGIN_NAME
     manifest_dir = plugin_dir / ".codex-plugin"
     manifest_dir.mkdir(parents=True)
-    (manifest_dir / "plugin.json").write_text(json.dumps({"version": "0.5.15"}), encoding="utf-8")
+    (manifest_dir / "plugin.json").write_text(json.dumps({"version": "0.5.16"}), encoding="utf-8")
     (plugin_dir / ".mcp.json").write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
     (plugin_dir / "README.md").write_text("# Plugin", encoding="utf-8")
 
@@ -67,7 +67,7 @@ def test_install_codex_registers_marketplace_plugin_and_removes_global_mcp(monke
     assert ["codex", "mcp", "remove", "chrome-devtools"] in commands
     assert not any(command[:3] == ["codex", "mcp", "add"] for command in commands)
     assert codex_install.PLUGIN_CONFIG_ID in (tmp_path / "config.toml").read_text(encoding="utf-8")
-    assert (tmp_path / "plugins" / "cache" / codex_install.MARKETPLACE_NAME / codex_install.PLUGIN_NAME / "0.5.15").exists()
+    assert (tmp_path / "plugins" / "cache" / codex_install.MARKETPLACE_NAME / codex_install.PLUGIN_NAME / "0.5.16").exists()
 
 
 def test_install_codex_cli_json_can_be_mocked(monkeypatch, tmp_path):

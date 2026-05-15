@@ -35,10 +35,11 @@ When the user gives a 1688 product URL or asks about the current Chrome page:
 1. Use `list_pages` and select the 1688 page.
 2. If needed, navigate Chrome to the provided URL.
 3. Use `take_snapshot`, `take_screenshot`, and `evaluate_script` to inspect the visible page.
-4. Capture rendered HTML and call `parse_1688_rendered_html_content`.
-5. Use `list_network_requests` and `get_network_request` for relevant 1688 responses.
-6. Pass useful JSON bodies to `parse_1688_network_payload_content`.
-7. Summarize product fit for a Korean seller: product type, price, options, seller signals, visible demand signals, image/video assets, risks, and next buying checks.
+4. Capture a compact visible snapshot with `evaluate_script`: page URL, document title, body innerText, and visible image/video/source URLs. Call `parse_1688_visible_page_snapshot` first so visible price, MOQ, seller, sold count, and media are not lost.
+5. If more data is needed, capture rendered HTML and call `parse_1688_rendered_html_content`.
+6. Use `list_network_requests` and `get_network_request` for relevant 1688 responses.
+7. Pass useful JSON bodies to `parse_1688_network_payload_content`.
+8. Summarize product fit for a Korean seller: product type, price, options, seller signals, visible demand signals, image/video assets, risks, and next buying checks.
 
 ## Search
 

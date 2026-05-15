@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import json
+from html import escape as html_escape
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from sourcing1688.utils import extract_offer_id, structured_error
 
 
 PARSER_VERSION = "0.4.0"
+ATTRIBUTE_STOP_LINES = {"商品描述", "价格说明", "包装信息", "店铺推荐", "买家评价", "订购说明"}
 
 
 def _dict(value) -> dict:
@@ -33,6 +35,25 @@ def _float(value) -> float | None:
 def _int(value) -> int | None:
     parsed = _float(value)
     return int(parsed) if parsed is not None else None
+
+
+def _text_lines(soup: BeautifulSoup) -> list[str]:
+    return [line.strip() for line in soup.get_text("\n", strip=True).splitlines() if line.strip()]
+
+
+def _visible_text(soup: BeautifulSoup) -> str:
+    return "\n".join(_text_lines(soup))
+
+
+def _parse_chinese_count(value: str) -> int | None:
+    cleaned = value.replace(",", "").strip()
+    match = re.search(r"(\d+(?:\.\d+)?)", cleaned)
+    if not match:
+        return None
+    number = float(match.group(1))
+    if "万" in cleaned:
+        number *= 10000
+    return int(number)
 
 
 def _rate(value) -> float | None:
@@ -61,6 +82,26 @@ def _extract_offer_id(html: str, path: Path | None, source_url: str | None = Non
     return None
 
 
+def _extract_visible_attributes(soup: BeautifulSoup) -> dict[str, object]:
+    lines = _text_lines(soup)
+    if "商品属性" not in lines:
+        return {}
+    start = max(index for index, line in enumerate(lines) if line == "商品属性") + 1
+    attrs: dict[str, object] = {}
+    index = start
+    while index + 1 < len(lines):
+        key = lines[index]
+        value = lines[index + 1]
+        if key in ATTRIBUTE_STOP_LINES:
+            break
+        if value in ATTRIBUTE_STOP_LINES:
+            break
+        if 1 <= len(key) <= 30 and key not in {"商品详情", "商品属性"}:
+            attrs.setdefault(key, value)
+        index += 2
+    return attrs
+
+
 def _extract_attributes(soup: BeautifulSoup, embedded: dict) -> dict[str, object]:
     attrs: dict[str, object] = {}
     offer_model = _dict(embedded.get("offerModel"))
@@ -83,13 +124,15 @@ def _extract_attributes(soup: BeautifulSoup, embedded: dict) -> dict[str, object
         cells = [cell.get_text(" ", strip=True) for cell in row.find_all(["th", "td"])]
         if len(cells) >= 2 and cells[0] and len(cells[0]) <= 30:
             attrs.setdefault(cells[0], cells[1])
+    attrs.update({key: value for key, value in _extract_visible_attributes(soup).items() if key not in attrs})
     return attrs
 
 
 def _extract_price_tiers(embedded: dict) -> list[PriceTier]:
     trade_model = _dict(embedded.get("tradeModel"))
     offer_price_model = _dict(trade_model.get("offerPriceModel"))
-    raw_ranges = embedded.get("priceRange") or embedded.get("priceRanges") or []
+    price_info = _dict(embedded.get("priceInfo"))
+    raw_ranges = embedded.get("priceRange") or embedded.get("priceRanges") or price_info.get("priceRanges") or []
     raw_current_prices = offer_price_model.get("currentPrices") or []
     tiers: list[PriceTier] = []
     for raw_items in [raw_ranges, raw_current_prices]:
@@ -105,10 +148,31 @@ def _extract_price_tiers(embedded: dict) -> list[PriceTier]:
             if not any(tier.min_quantity == min_quantity and tier.price == price for tier in tiers):
                 tiers.append(PriceTier(min_quantity=min_quantity, price=price))
     if not tiers:
-        price = _float(trade_model.get("priceDisplay") or trade_model.get("minPrice") or trade_model.get("maxPrice"))
+        price = _float(
+            embedded.get("price")
+            or price_info.get("price")
+            or price_info.get("promotionPrice")
+            or price_info.get("consignPrice")
+            or trade_model.get("priceDisplay")
+            or trade_model.get("minPrice")
+            or trade_model.get("maxPrice")
+        )
         if price is not None:
-            tiers.append(PriceTier(min_quantity=_int(trade_model.get("beginAmount")) or 1, price=price))
+            tiers.append(PriceTier(min_quantity=_int(embedded.get("beginAmount") or price_info.get("beginAmount") or trade_model.get("beginAmount")) or 1, price=price))
     return tiers
+
+
+def _extract_visible_price_tiers(soup: BeautifulSoup) -> list[PriceTier]:
+    text = _visible_text(soup)
+    if "¥" not in text:
+        return []
+    price_match = re.search(r"¥\s*(\d+(?:\.\d+)?)\s*(?:~\s*¥\s*(\d+(?:\.\d+)?))?", text)
+    if not price_match:
+        return []
+    min_quantity = 1
+    if quantity_match := re.search(r"(\d+)\s*个起批", text):
+        min_quantity = int(quantity_match.group(1))
+    return [PriceTier(min_quantity=min_quantity, price=float(price_match.group(1)))]
 
 
 def _extract_sku_options(embedded: dict) -> list[SkuOption]:
@@ -154,23 +218,40 @@ def _extract_option_images(embedded: dict) -> list[str]:
 
 
 def _extract_seller(embedded: dict) -> SellerInfo | None:
-    seller_raw = _dict(embedded.get("seller")) or _dict(embedded.get("sellerModel"))
+    seller_raw = (
+        _dict(embedded.get("seller"))
+        or _dict(embedded.get("sellerModel"))
+        or _dict(embedded.get("sellerDataInfo"))
+        or _dict(embedded.get("shopInfo"))
+        or _dict(embedded.get("companyInfo"))
+        or _dict(embedded.get("memberModel"))
+    )
     if not seller_raw:
         return None
     winport_urls = _dict(seller_raw.get("sellerWinportUrlMap"))
     signs = _dict(_dict(seller_raw.get("sellerSign")).get("signs"))
     badges = [key for key, enabled in signs.items() if enabled]
-    name = seller_raw.get("name") or seller_raw.get("companyName") or seller_raw.get("loginId")
-    url = seller_raw.get("url") or seller_raw.get("winportUrl") or winport_urls.get("defaultUrl") or winport_urls.get("indexUrl")
+    name = seller_raw.get("name") or seller_raw.get("companyName") or seller_raw.get("shopName") or seller_raw.get("loginId") or seller_raw.get("memberName")
+    url = seller_raw.get("url") or seller_raw.get("winportUrl") or seller_raw.get("shopUrl") or winport_urls.get("defaultUrl") or winport_urls.get("indexUrl")
     if not (name or url):
         return None
     return SellerInfo(
         name=str(name) if name else None,
         url=str(url) if url else None,
-        score=_float(seller_raw.get("score")),
+        score=_float(seller_raw.get("score") or seller_raw.get("tradeScore") or seller_raw.get("compositeServiceScore")),
         level=str(seller_raw.get("level") or seller_raw.get("sellerIdentity") or "") or None,
+        location=str(seller_raw.get("location") or seller_raw.get("province") or "") or None,
+        years_active=_int(seller_raw.get("yearsActive") or seller_raw.get("tpYear") or seller_raw.get("year")),
         badges=badges,
     )
+
+
+def _extract_visible_seller(soup: BeautifulSoup) -> SellerInfo | None:
+    lines = _text_lines(soup)
+    for line in lines[:80]:
+        if any(marker in line for marker in ["有限公司", "工厂", "商行", "店", "厂"]) and len(line) <= 60:
+            return SellerInfo(name=line)
+    return None
 
 
 def _extract_category(embedded: dict) -> str | None:
@@ -188,6 +269,37 @@ def _extract_stock(embedded: dict) -> int | None:
 def _extract_trade_volume(embedded: dict) -> int | None:
     trade_model = _dict(embedded.get("tradeModel"))
     return _int(embedded.get("tradeVolume") or trade_model.get("saleCount"))
+
+
+def _extract_visible_trade_volume(soup: BeautifulSoup) -> int | None:
+    text = _visible_text(soup)
+    for pattern in [
+        r"一年内\s*([0-9,.]+(?:万)?\+?)\s*个成交",
+        r"([0-9,.]+(?:万)?\+?)\s*个成交",
+        r"已售\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个)?",
+    ]:
+        if match := re.search(pattern, text):
+            return _parse_chinese_count(match.group(1))
+    return None
+
+
+def _promote_main_images(main: list[str], detail: list[str]) -> tuple[list[str], list[str]]:
+    if main:
+        return dedupe_urls(main), dedupe_urls(detail)
+    product_like: list[str] = []
+    for url in detail:
+        lowered = url.lower()
+        if "/img/ibank/" not in lowered:
+            continue
+        if any(suffix in lowered for suffix in [".220x220", ".310x310", ".search", ".summ"]):
+            continue
+        product_like.append(url)
+    promoted = dedupe_urls(product_like[:8])
+    if not promoted:
+        return [], dedupe_urls(detail)
+    promoted_set = set(promoted)
+    remaining_detail = [url for url in detail if url not in promoted_set]
+    return promoted, dedupe_urls(remaining_detail)
 
 
 def _iter_nested(value: Any):
@@ -208,6 +320,9 @@ def _candidate_image_url(value: Any) -> str | None:
     if not isinstance(value, dict):
         return None
     for key in [
+        "url",
+        "src",
+        "poster",
         "fullPathImageURI",
         "imageUrl",
         "imageURL",
@@ -253,6 +368,16 @@ def _extract_model_images(embedded: dict) -> tuple[list[str], list[str], list[st
     return dedupe_urls(main), dedupe_urls(detail), dedupe_urls(option)
 
 
+def _merge_image_sources(assets: dict[str, list[str]], embedded: dict) -> dict[str, list[str]]:
+    model_main, model_detail, model_option = _extract_model_images(embedded)
+    return {
+        "main_images": dedupe_urls(assets["main_images"] + model_main),
+        "detail_images": dedupe_urls(assets["detail_images"] + model_detail),
+        "option_images": dedupe_urls(assets["option_images"] + model_option),
+        "videos": assets["videos"],
+    }
+
+
 def _extract_model_videos(embedded: dict) -> tuple[list[str], bool]:
     videos: list[str] = []
     metadata_seen = False
@@ -294,6 +419,7 @@ def _build_detail_response(
     source_type: str,
     warnings: list[str],
 ) -> DetailResponse:
+    assets = _merge_image_sources(assets, embedded)
     title = (
         embedded.get("subject")
         or embedded.get("title")
@@ -302,23 +428,26 @@ def _build_detail_response(
         or (soup.title.string.strip() if soup.title and soup.title.string else None)
         or f"1688 offer {offer_id}"
     )
+    price_tiers = _extract_price_tiers(embedded) or _extract_visible_price_tiers(soup)
+    seller = _extract_seller(embedded) or _extract_visible_seller(soup)
+    main_images, detail_images = _promote_main_images(assets["main_images"], assets["detail_images"])
     option_images = dedupe_urls(assets["option_images"] + _extract_option_images(embedded))
     detail = ProductDetail(
         offer_id=offer_id,
         url=source_url or f"https://detail.1688.com/offer/{offer_id}.html",
         title_zh=str(title),
         title_ko_optional=embedded.get("subjectTrans") or embedded.get("titleTrans"),
-        price_tiers=_extract_price_tiers(embedded),
+        price_tiers=price_tiers,
         sku_options=_extract_sku_options(embedded),
         attributes=_extract_attributes(soup, embedded),
         category=_extract_category(embedded),
         stock=_extract_stock(embedded),
         month_sold=_int(embedded.get("monthSold")),
-        trade_volume=_extract_trade_volume(embedded),
+        trade_volume=_extract_trade_volume(embedded) or _extract_visible_trade_volume(soup),
         repurchase_rate=_rate(embedded.get("repurchaseRate")),
-        seller=_extract_seller(embedded),
-        main_image_urls=assets["main_images"],
-        detail_image_urls=assets["detail_images"],
+        seller=seller,
+        main_image_urls=main_images,
+        detail_image_urls=detail_images,
         option_image_urls=option_images,
         video_urls=assets["videos"],
         raw_source_summary={"provider": provider, "parser_version": PARSER_VERSION, "source_path": str(source_path) if source_path else None, "source_url": source_url},
@@ -379,6 +508,46 @@ def parse_rendered_html(html: str, *, source_path: str | Path | None = None, sou
 def parse_rendered_html_file(path: str | Path) -> DetailResponse:
     file_path = Path(path)
     return parse_rendered_html(file_path.read_text(encoding="utf-8"), source_path=file_path)
+
+
+def parse_visible_page_snapshot(
+    *,
+    source_url: str,
+    title: str | None = None,
+    body_text: str = "",
+    media_urls: list[str] | None = None,
+) -> DetailResponse:
+    media_tags: list[str] = []
+    for url in media_urls or []:
+        escaped_url = html_escape(str(url), quote=True)
+        lowered = str(url).lower().split("?", 1)[0]
+        if lowered.endswith((".mp4", ".m3u8", ".mov")) or "video" in lowered:
+            media_tags.append(f'<video src="{escaped_url}"></video>')
+        else:
+            media_tags.append(f'<img src="{escaped_url}">')
+    text_nodes = "\n".join(f"<div>{html_escape(line)}</div>" for line in body_text.splitlines() if line.strip())
+    html = "\n".join(
+        [
+            "<html>",
+            "<head>",
+            f"<title>{html_escape(title or '')}</title>",
+            "</head>",
+            "<body>",
+            text_nodes,
+            *media_tags,
+            "</body>",
+            "</html>",
+        ]
+    )
+    response = parse_rendered_html(html, source_url=source_url)
+    response.provider = "chrome_devtools"
+    response.source_type = "browser"
+    if response.item:
+        response.item.provider = "chrome_devtools"
+        response.item.source_type = "browser"
+        response.item.raw_source_summary["provider"] = "chrome_devtools"
+        response.item.raw_source_summary["source_kind"] = "visible_page_snapshot"
+    return response
 
 
 def parse_network_payload(payload: str | dict | list, *, source_url: str | None = None, raw_reference_path: str | None = None) -> DetailResponse:

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 
-IMAGE_HOST_MARKERS = ("alicdn.com", "aliimg.com")
+IMAGE_HOST_MARKERS = ("alicdn.com", "aliimg.com", "image-transform.oss-accelerate.aliyuncs.com")
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".svg")
 VIDEO_EXTENSIONS = (".mp4", ".m3u8", ".mov")
 NON_ASSET_EXTENSIONS = (".js", ".css", ".ttf", ".woff", ".woff2", ".html", ".htm", ".json", ".ico")
@@ -52,6 +52,11 @@ def dedupe_urls(urls: list[str]) -> list[str]:
     return deduped
 
 
+def _srcset_first_url(value: str) -> str | None:
+    first = value.split(",", 1)[0].strip()
+    return first.split(None, 1)[0] if first else None
+
+
 def _looks_like_image_url(url: str) -> bool:
     lowered = url.lower()
     path = urlparse(lowered).path
@@ -90,7 +95,15 @@ def extract_assets(soup: BeautifulSoup, html: str) -> dict[str, list[str]]:
     videos: list[str] = []
 
     for img in soup.find_all("img"):
-        raw_url = img.get("data-src") or img.get("data-original") or img.get("src")
+        raw_url = (
+            img.get("data-src")
+            or img.get("data-original")
+            or img.get("data-lazy-src")
+            or img.get("data-img")
+            or img.get("data-ks-lazyload")
+            or img.get("src")
+            or (_srcset_first_url(str(img.get("srcset"))) if img.get("srcset") else None)
+        )
         if not raw_url:
             continue
         url = normalize_url(str(raw_url))
@@ -112,6 +125,9 @@ def extract_assets(soup: BeautifulSoup, html: str) -> dict[str, list[str]]:
         raw_url = video.get("src") or video.get("data-src")
         if raw_url and (url := normalize_url(str(raw_url))):
             videos.append(url)
+        poster = video.get("poster")
+        if poster and (poster_url := normalize_url(str(poster))):
+            main.append(poster_url)
 
     script_images, script_videos = extract_urls_from_text(html)
     for url in script_images:

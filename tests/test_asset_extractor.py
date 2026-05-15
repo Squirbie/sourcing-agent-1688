@@ -52,3 +52,26 @@ def test_extract_urls_ignores_scripts_fonts_and_root_hosts():
 
     assert images == ["https://cbu01.alicdn.com/img/ibank/O1CN-real.jpg"]
     assert videos == []
+
+
+def test_extract_assets_accepts_live_lazy_sources_and_video_poster():
+    html = """
+    <html>
+      <body>
+        <img data-lazy-src="//cbu01.alicdn.com/img/ibank/O1CN-lazy.jpg">
+        <img data-img="https://cbu01.alicdn.com/img/ibank/O1CN-data-img.jpg">
+        <img srcset="https://cbu01.alicdn.com/img/ibank/O1CN-srcset.jpg 1x, https://cbu01.alicdn.com/img/ibank/O1CN-srcset-2x.jpg 2x">
+        <video poster="https://cbu01.alicdn.com/img/ibank/O1CN-poster.jpg">
+          <source src="https://cloud.video.taobao.com/play/u/1/p/1/e/6/t/1/video.mp4">
+        </video>
+      </body>
+    </html>
+    """
+
+    assets = extract_assets(BeautifulSoup(html, "html.parser"), html)
+
+    assert "https://cbu01.alicdn.com/img/ibank/O1CN-lazy.jpg" in assets["main_images"]
+    assert "https://cbu01.alicdn.com/img/ibank/O1CN-data-img.jpg" in assets["main_images"]
+    assert "https://cbu01.alicdn.com/img/ibank/O1CN-srcset.jpg" in assets["main_images"]
+    assert "https://cbu01.alicdn.com/img/ibank/O1CN-poster.jpg" in assets["main_images"]
+    assert assets["videos"] == ["https://cloud.video.taobao.com/play/u/1/p/1/e/6/t/1/video.mp4"]

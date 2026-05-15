@@ -12,7 +12,7 @@ from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.assets.downloader import download_assets as download_parsed_assets
-from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_network_payload, parse_rendered_html, parse_rendered_html_file
+from sourcing1688.parsers.rendered_html import PARSER_VERSION, parse_network_payload, parse_rendered_html, parse_rendered_html_file, parse_visible_page_snapshot
 from sourcing1688.services import (
     analyze_product_url,
     check_provider,
@@ -126,6 +126,22 @@ def parse_1688_rendered_html_content(html: str, source_url: str | None = None) -
         return jsonable(parse_rendered_html(html, source_url=source_url))
     except Exception as exc:  # noqa: BLE001
         return error_payload("parse_html_failed", str(exc))
+
+
+@mcp.tool()
+def parse_1688_visible_page_snapshot(
+    source_url: str,
+    title: str | None = None,
+    body_text: str = "",
+    media_urls: list[str] | None = None,
+) -> dict[str, Any]:
+    """Parse compact visible Chrome page data captured from the current 1688 tab."""
+    if not source_url.strip():
+        return error_payload("invalid_offer_id", "source_url is required.")
+    try:
+        return jsonable(parse_visible_page_snapshot(source_url=source_url, title=title, body_text=body_text, media_urls=media_urls or []))
+    except Exception as exc:  # noqa: BLE001
+        return error_payload("parse_visible_snapshot_failed", str(exc))
 
 
 @mcp.tool()
