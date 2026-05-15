@@ -217,7 +217,7 @@ def test_visible_page_snapshot_prefers_company_name_over_supplier_highlights():
     )
 
     assert result.provider == "chrome_devtools"
-    assert result.provider_version == "0.5.24"
+    assert result.provider_version == "0.5.25"
     assert result.live_verified is True
     assert result.item.seller.name == "浙江华彩箱包有限公司"
     assert result.item.video_urls == ["https://cloud.video.taobao.com/play/u/2684580704/p/2/e/6/t/1/442197115990.mp4"]
@@ -242,6 +242,50 @@ def test_visible_page_snapshot_does_not_verify_lookalike_domain():
     assert result.live_verified is False
     assert result.item is not None
     assert result.item.live_verified is False
+
+
+def test_visible_page_snapshot_extracts_tiers_seller_attributes_and_filters_external_media():
+    result = parse_visible_page_snapshot(
+        source_url="https://detail.1688.com/offer/812345678901.html",
+        title="手机防水袋 户外漂流潜水防水包 - 阿里巴巴",
+        body_text="\n".join(
+            [
+                "手机防水袋 户外漂流潜水防水包",
+                "店铺 深圳市蓝海户外用品有限公司",
+                "100-999 个 ¥4.50",
+                "1000-4999 个 ¥3.60",
+                "≥5000 个 ¥2.80",
+                "30天成交 1.2万件",
+                "复购率 28%",
+                "诚信通 8年",
+                "实力商家",
+                "发货地 广东 深圳",
+                "材质 PVC+ABS",
+                "适用型号 6.8英寸以内手机",
+                "颜色 透明黑边, 透明白边, 荧光绿",
+                "支持定制 logo定制 包装定制",
+            ]
+        ),
+        media_urls=[
+            "https://cbu01.alicdn.com/img/ibank/waterproof.jpg",
+            "https://example.com/not-1688-cdn.jpg",
+        ],
+    )
+
+    assert result.item is not None
+    detail = result.item
+    assert [(tier.min_quantity, tier.price) for tier in detail.price_tiers] == [(100, 4.5), (1000, 3.6), (5000, 2.8)]
+    assert detail.month_sold == 12000
+    assert detail.trade_volume == 12000
+    assert detail.repurchase_rate == 0.28
+    assert detail.seller.name == "深圳市蓝海户外用品有限公司"
+    assert detail.seller.location == "广东 深圳"
+    assert detail.seller.years_active == 8
+    assert "实力商家" in detail.seller.badges
+    assert detail.attributes["材质"] == "PVC+ABS"
+    assert detail.attributes["适用型号"] == "6.8英寸以内手机"
+    assert detail.main_image_urls == ["https://cbu01.alicdn.com/img/ibank/waterproof.jpg"]
+    assert result.warnings
 
 
 def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
@@ -282,7 +326,7 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
 
     assert result.provider == "chrome_devtools"
     assert detail.source_type == "browser"
-    assert result.provider_version == "0.5.24"
+    assert result.provider_version == "0.5.25"
     assert detail.price_tiers[0].price == 25.0
     assert detail.trade_volume == 100
     assert detail.seller.name == "杜老汉（山东）生物科技有限公司"

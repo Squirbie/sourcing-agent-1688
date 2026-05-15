@@ -14,14 +14,17 @@ from sourcing1688.utils import sanitize_filename, slugify
 
 
 DEFAULT_INCLUDE = {"html", "main_images", "detail_images", "option_images", "video", "attributes"}
+INCLUDE_ALIASES = {"videos": "video", "main": "main_images", "detail": "detail_images", "options": "option_images"}
 
 
 def parse_include(include: str | set[str] | list[str] | None) -> set[str]:
     if include is None:
         return set(DEFAULT_INCLUDE)
     if isinstance(include, str):
-        return {item.strip() for item in include.split(",") if item.strip()}
-    return {str(item).strip() for item in include if str(item).strip()}
+        items = [item.strip() for item in include.split(",") if item.strip()]
+    else:
+        items = [str(item).strip() for item in include if str(item).strip()]
+    return {INCLUDE_ALIASES.get(item, item) for item in items}
 
 
 def _extension_from_url(url: str, default: str = ".bin") -> str:

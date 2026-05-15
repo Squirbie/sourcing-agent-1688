@@ -68,3 +68,19 @@ async def test_zip_package_includes_manifest_json(tmp_path):
     with zipfile.ZipFile(manifest.zip_path) as archive:
         names = archive.namelist()
     assert any(name.endswith("manifest.json") for name in names)
+
+
+@pytest.mark.anyio
+async def test_download_assets_accepts_videos_include_alias(tmp_path):
+    detail = ProductDetail(
+        offer_id="123456789",
+        url="https://detail.1688.com/offer/123456789.html",
+        title_zh="旅行收纳袋",
+        video_urls=["https://cloud.video.taobao.com/play/u/1/p/2/e/6/t/1/example.mp4"],
+    )
+
+    manifest = await download_assets(detail, tmp_path, include={"videos"}, dry_run=True)
+
+    assert manifest.status == "dry_run"
+    assert len(manifest.dry_run_assets) == 1
+    assert manifest.dry_run_assets[0].asset_type == "video"

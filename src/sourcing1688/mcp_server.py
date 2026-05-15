@@ -4,6 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from mcp.server.fastmcp import FastMCP
 
@@ -30,6 +31,32 @@ from sourcing1688.storage import SourcingStorage
 from sourcing1688.utils import error_payload, jsonable
 
 mcp = FastMCP("sourcing1688")
+
+
+def _is_1688_source_url(source_url: str | None) -> bool:
+    if not source_url:
+        return False
+    try:
+        host = urlparse(source_url).netloc.lower()
+    except ValueError:
+        return False
+    return host == "1688.com" or host.endswith(".1688.com")
+
+
+def _mark_chrome_html_response(response, source_url: str | None):
+    response.provider = "chrome_devtools"
+    response.source_type = "browser"
+    response.live_verified = _is_1688_source_url(source_url)
+    if response.item:
+        response.item.provider = "chrome_devtools"
+        response.item.source_type = "browser"
+        response.item.live_verified = response.live_verified
+        response.item.raw_source_summary["provider"] = "chrome_devtools"
+        response.item.raw_source_summary["source_kind"] = "rendered_html_content"
+    elif not response.live_verified:
+        response.message = "Current page is not a 1688 offer page, or no 1688 offer_id was visible in the captured page."
+        response.warnings.append("Open a 1688 detail page in Chrome, then capture the visible page or rendered HTML again.")
+    return response
 
 
 @mcp.tool()
@@ -125,7 +152,7 @@ def parse_1688_rendered_html_content(html: str, source_url: str | None = None) -
     if not html.strip():
         return error_payload("parse_html_failed", "HTML content is empty.")
     try:
-        return jsonable(parse_rendered_html(html, source_url=source_url))
+        return jsonable(_mark_chrome_html_response(parse_rendered_html(html, source_url=source_url), source_url))
     except Exception as exc:  # noqa: BLE001
         return error_payload("parse_html_failed", str(exc))
 
@@ -169,7 +196,7 @@ async def download_1688_product_assets_from_html_content(
     if not html.strip():
         return error_payload("parse_html_failed", "HTML content is empty.")
     try:
-        parsed = parse_rendered_html(html, source_url=source_url)
+        parsed = _mark_chrome_html_response(parse_rendered_html(html, source_url=source_url), source_url)
         if parsed.item is None:
             return parsed.model_dump(mode="json")
         out = output_dir or str(get_settings().output_dir)
@@ -184,10 +211,10 @@ async def download_1688_product_assets_from_html_content(
         )
         payload = {
             "status": manifest.status,
-            "provider": "local_html",
+            "provider": parsed.provider,
             "provider_version": PARSER_VERSION,
-            "source_type": "local_html",
-            "live_verified": False,
+            "source_type": parsed.source_type,
+            "live_verified": parsed.live_verified,
             "manifest_path": str(Path(manifest.saved_dir) / "manifest.json"),
             "counts": manifest.counts,
             "warnings": parsed.warnings,

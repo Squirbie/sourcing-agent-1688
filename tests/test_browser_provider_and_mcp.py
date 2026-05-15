@@ -64,6 +64,33 @@ def test_mcp_server_registers_expected_tools():
     assert "parse_1688_search_results_snapshot" in tool_names
 
 
+def test_mcp_rendered_html_content_marks_chrome_capture():
+    html = """
+    <html><head><title>旅行收纳袋</title></head><body>
+      <div>浙江华彩箱包有限公司</div>
+      <div>¥41.00</div>
+      <div>2件起批</div>
+    </body></html>
+    """
+
+    payload = mcp_server.parse_1688_rendered_html_content(html, source_url="https://detail.1688.com/offer/755178864684.html")
+
+    assert payload["provider"] == "chrome_devtools"
+    assert payload["source_type"] == "browser"
+    assert payload["live_verified"] is True
+    assert payload["item"]["provider"] == "chrome_devtools"
+
+
+def test_mcp_rendered_html_content_non_1688_page_message_is_clear():
+    payload = mcp_server.parse_1688_rendered_html_content("<html><body>not a product page</body></html>", source_url="https://github.com/example")
+
+    assert payload["provider"] == "chrome_devtools"
+    assert payload["source_type"] == "browser"
+    assert payload["live_verified"] is False
+    assert "not a 1688 offer page" in payload["message"]
+    assert payload["warnings"]
+
+
 def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch, tmp_path):
     calls = []
 

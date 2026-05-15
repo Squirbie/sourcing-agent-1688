@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from sourcing1688.config import Settings, get_settings
+from sourcing1688 import __version__
 from sourcing1688.models import (
     AssetDownloadResponse,
     DetailResponse,
@@ -19,7 +20,7 @@ from sourcing1688.providers.base import Base1688Provider
 from sourcing1688.utils import structured_error
 
 
-PROVIDER_VERSION = "0.2.0"
+PROVIDER_VERSION = __version__
 
 
 class Auto1688Provider(Base1688Provider):
@@ -126,3 +127,20 @@ class Auto1688Provider(Base1688Provider):
         if provider is None:
             return self._missing_live_provider(ImageSearchResponse)
         return await provider.image_search(image_url=image_url, image_path=image_path, page=page, page_size=page_size)
+
+
+class ChromeDevtools1688Provider(Auto1688Provider):
+    """Explicit Chrome DevTools route. It never falls back to API credentials."""
+
+    name = "chrome-devtools"
+    source_type = "browser"
+
+    def capabilities(self) -> ProviderCapability:
+        capability = super().capabilities()
+        capability.provider = self.name
+        capability.source_type = "browser"
+        capability.notes = ["Use Chrome DevTools page/network capture from the user's existing Chrome tabs."]
+        return capability
+
+    def resolve(self) -> Base1688Provider | None:
+        return None

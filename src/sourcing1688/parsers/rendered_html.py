@@ -60,6 +60,20 @@ def _is_live_browser_capture(provider: str, source_url: str | None) -> bool:
     return provider == "chrome_devtools" and _is_1688_source_url(source_url)
 
 
+def _is_expected_1688_media_url(url: str) -> bool:
+    parsed = safe_urlparse(url)
+    if not parsed:
+        return False
+    host = parsed.netloc.lower()
+    return (
+        host == "1688.com"
+        or host.endswith(".1688.com")
+        or host.endswith(".alicdn.com")
+        or host.endswith(".aliimg.com")
+        or host.endswith(".taobao.com")
+    )
+
+
 def _parse_chinese_count(value: str) -> int | None:
     cleaned = value.replace(",", "").strip()
     match = re.search(r"(\d+(?:\.\d+)?)", cleaned)
@@ -99,10 +113,17 @@ def _extract_offer_id(html: str, path: Path | None, source_url: str | None = Non
 
 def _extract_visible_attributes(soup: BeautifulSoup) -> dict[str, object]:
     lines = _text_lines(soup)
+    inline_keys = ("材质", "适用型号", "颜色", "支持定制", "品牌", "规格", "产地", "货号", "包装", "尺寸", "重量")
+    inline_attrs: dict[str, object] = {}
+    for line in lines:
+        clean = re.sub(r"\s+", " ", line).strip()
+        for key in inline_keys:
+            if clean.startswith(f"{key} ") and len(clean) > len(key) + 1:
+                inline_attrs.setdefault(key, clean[len(key):].strip())
     if "商品属性" not in lines:
-        return {}
+        return inline_attrs
     start = max(index for index, line in enumerate(lines) if line == "商品属性") + 1
-    attrs: dict[str, object] = {}
+    attrs: dict[str, object] = dict(inline_attrs)
     index = start
     while index + 1 < len(lines):
         key = lines[index]
@@ -178,14 +199,26 @@ def _extract_price_tiers(embedded: dict) -> list[PriceTier]:
 
 
 def _extract_visible_price_tiers(soup: BeautifulSoup) -> list[PriceTier]:
+    lines = _text_lines(soup)
+    tiers: list[PriceTier] = []
+    for line in lines:
+        clean = re.sub(r"\s+", " ", line)
+        match = re.search(r"(?:≥|>=)?\s*(\d+)(?:\s*[-~]\s*\d+)?\s*(?:个|件|只|套|箱|包)?\s*¥\s*(\d+(?:\.\d+)?)", clean)
+        if match:
+            tiers.append(PriceTier(min_quantity=int(match.group(1)), price=float(match.group(2))))
+    if tiers:
+        deduped: dict[int, PriceTier] = {}
+        for tier in tiers:
+            deduped.setdefault(tier.min_quantity, tier)
+        return sorted(deduped.values(), key=lambda tier: tier.min_quantity)
     text = _visible_text(soup)
     if "¥" not in text:
         return []
-    price_match = re.search(r"¥\s*(\d+(?:\.\d+)?)\s*(?:~\s*¥\s*(\d+(?:\.\d+)?))?", text)
+    price_match = re.search(r"¥\s*(\d+(?:\.\d+)?)\s*(?:[-~]\s*¥?\s*(\d+(?:\.\d+)?))?", text)
     if not price_match:
         return []
     min_quantity = 1
-    if quantity_match := re.search(r"(\d+)\s*个起批", text):
+    if quantity_match := re.search(r"(\d+)\s*(?:个|件|只|套|箱|包)\s*起批", text):
         min_quantity = int(quantity_match.group(1))
     return [PriceTier(min_quantity=min_quantity, price=float(price_match.group(1)))]
 
@@ -263,10 +296,12 @@ def _extract_seller(embedded: dict) -> SellerInfo | None:
 
 def _extract_visible_seller(soup: BeautifulSoup) -> SellerInfo | None:
     lines = _text_lines(soup)
+    text = _visible_text(soup)
     candidates: list[tuple[int, str]] = []
     skip_markers = ("供应商亮点", "功能亮点", "源头工厂", "支持OEM", "支持ODM", "月产", "跨境专供", "共")
     for line in lines[:160]:
         clean = re.sub(r"\s+", " ", line).strip()
+        clean = re.sub(r"^(?:店铺|商家|供应商|厂家)\s+", "", clean)
         if not clean or len(clean) > 80:
             continue
         if "|" in clean or any(marker in clean for marker in skip_markers):
@@ -282,7 +317,17 @@ def _extract_visible_seller(soup: BeautifulSoup) -> SellerInfo | None:
             candidates.append((score - abs(len(clean) - 12), clean))
     if candidates:
         candidates.sort(reverse=True)
-        return SellerInfo(name=candidates[0][1])
+        seller = SellerInfo(name=candidates[0][1])
+        if match := re.search(r"发货地\s*([^\n]+)", text):
+            seller.location = match.group(1).strip()
+        if match := re.search(r"(?:诚信通|开店|经营)\s*(\d+)\s*年", text):
+            seller.years_active = int(match.group(1))
+        badges = []
+        for badge in ("实力商家", "诚信通", "源头工厂", "48小时发货", "24小时发货"):
+            if badge in text:
+                badges.append(badge)
+        seller.badges = badges
+        return seller
     return None
 
 
@@ -314,6 +359,25 @@ def _extract_visible_trade_volume(soup: BeautifulSoup) -> int | None:
     ]:
         if match := re.search(pattern, text):
             return _parse_chinese_count(match.group(1))
+    return None
+
+
+def _extract_visible_month_sold(soup: BeautifulSoup) -> int | None:
+    text = _visible_text(soup)
+    for pattern in [
+        r"30天成交\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个|单)?",
+        r"近30天销量\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个|单)?",
+        r"月销\s*([0-9,.]+(?:万)?\+?)\s*(?:件|个|单)?",
+    ]:
+        if match := re.search(pattern, text):
+            return _parse_chinese_count(match.group(1))
+    return None
+
+
+def _extract_visible_repurchase_rate(soup: BeautifulSoup) -> float | None:
+    text = _visible_text(soup)
+    if match := re.search(r"(?:复购率|回头率|重复购买率)\s*([0-9]+(?:\.[0-9]+)?)\s*%", text):
+        return float(match.group(1)) / 100
     return None
 
 
@@ -477,9 +541,9 @@ def _build_detail_response(
         attributes=_extract_attributes(soup, embedded),
         category=_extract_category(embedded),
         stock=_extract_stock(embedded),
-        month_sold=_int(embedded.get("monthSold")),
+        month_sold=_int(embedded.get("monthSold")) or _extract_visible_month_sold(soup),
         trade_volume=_extract_trade_volume(embedded) or _extract_visible_trade_volume(soup),
-        repurchase_rate=_rate(embedded.get("repurchaseRate")),
+        repurchase_rate=_rate(embedded.get("repurchaseRate")) or _extract_visible_repurchase_rate(soup),
         seller=seller,
         main_image_urls=main_images,
         detail_image_urls=detail_images,
@@ -553,7 +617,11 @@ def parse_visible_page_snapshot(
     media_urls: list[str] | None = None,
 ) -> DetailResponse:
     media_tags: list[str] = []
+    media_warnings: list[str] = []
     for url in media_urls or []:
+        if not _is_expected_1688_media_url(str(url)):
+            media_warnings.append(f"Skipped external media URL outside expected 1688/Alibaba hosts: {url}")
+            continue
         escaped_url = html_escape(str(url), quote=True)
         lowered = str(url).lower()
         parsed = safe_urlparse(lowered)
@@ -578,15 +646,20 @@ def parse_visible_page_snapshot(
         ]
     )
     response = parse_rendered_html(html, source_url=source_url)
+    response.warnings.extend(media_warnings)
     response.provider = "chrome_devtools"
     response.source_type = "browser"
     response.live_verified = _is_live_browser_capture("chrome_devtools", source_url)
+    if response.item is None and not response.live_verified:
+        response.message = "Current page is not a 1688 offer page, or no 1688 offer_id was visible in the captured page."
+        response.warnings.append("Open a 1688 detail page in Chrome, then capture the visible page again.")
     if response.item:
         response.item.provider = "chrome_devtools"
         response.item.source_type = "browser"
         response.item.live_verified = response.live_verified
         response.item.raw_source_summary["provider"] = "chrome_devtools"
         response.item.raw_source_summary["source_kind"] = "visible_page_snapshot"
+        response.item.warnings.extend(media_warnings)
     return response
 
 

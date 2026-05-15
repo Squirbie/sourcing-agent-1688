@@ -158,6 +158,56 @@ def test_search_results_does_not_verify_lookalike_1688_domain():
     assert payload["capture_status"] == "unverified_source_url"
 
 
+def test_search_results_accepts_chinese_keys_and_price_ranges():
+    payload = parse_search_results_snapshot(
+        keyword="手机防水袋",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "标题": "手机防水袋 户外漂流潜水防水包",
+                "链接": "https://detail.1688.com/offer/800000000102.html",
+                "价格": "¥2.80-4.50",
+                "成交": "30天成交 1.2万件",
+                "店铺": "深圳市蓝海户外用品有限公司",
+                "图片": "https://cbu01.alicdn.com/img/ibank/waterproof.jpg",
+                "raw_text": "复购率 35% 48小时发货",
+            }
+        ],
+        cny_krw_rate=200,
+        min_items=1,
+    )
+
+    item = payload["items"][0]
+    assert item["title_zh"].startswith("手机防水袋")
+    assert item["price_cny_min"] == 2.8
+    assert item["price_cny_max"] == 4.5
+    assert item["sold_count"] == 12000
+    assert item["repurchase_rate"] == 0.35
+    assert item["seller_name"] == "深圳市蓝海户外用品有限公司"
+    assert item["image_url"].endswith("waterproof.jpg")
+    assert item["title_ko_summary"] == "방수 파우치/방수팩 후보"
+
+
+def test_search_results_does_not_treat_repurchase_rate_as_sales_count():
+    payload = parse_search_results_snapshot(
+        keyword="手机防水袋",
+        source_url="https://s.1688.com/selloffer/offer_search.htm",
+        items=[
+            {
+                "title": "手机防水袋",
+                "url": "https://detail.1688.com/offer/800000000103.html",
+                "sold_text": "复购率 35%",
+                "raw_text": "复购率 35%",
+            }
+        ],
+        min_items=1,
+    )
+
+    item = payload["items"][0]
+    assert item["sold_count"] is None
+    assert item["repurchase_rate"] == 0.35
+
+
 def test_review_snapshot_extracts_tags_and_empty_review_state():
     payload = parse_review_snapshot(
         source_url="https://detail.1688.com/offer/755178864684.html",

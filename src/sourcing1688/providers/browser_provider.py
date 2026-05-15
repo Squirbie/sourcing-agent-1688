@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sourcing1688 import __version__
 from sourcing1688.assets.downloader import download_assets
 from sourcing1688.config import Settings, get_settings
 from sourcing1688.models import (
@@ -24,7 +25,7 @@ from sourcing1688.state import runtime_paths
 from sourcing1688.utils import encode_1688_search_keyword, extract_offer_id, structured_error
 
 
-PROVIDER_VERSION = "0.2.0"
+PROVIDER_VERSION = __version__
 
 
 class Browser1688Provider(Base1688Provider):

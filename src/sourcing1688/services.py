@@ -17,7 +17,7 @@ from sourcing1688.models import (
     SearchResponse,
 )
 from sourcing1688.providers.api_provider import Api1688Provider
-from sourcing1688.providers.auto_provider import Auto1688Provider
+from sourcing1688.providers.auto_provider import Auto1688Provider, ChromeDevtools1688Provider
 from sourcing1688.providers.base import Base1688Provider
 from sourcing1688.providers.browser_provider import Browser1688Provider
 from sourcing1688.providers.local_html_provider import LocalHtml1688Provider
@@ -32,7 +32,7 @@ CHROME_DEVTOOLS_ALIASES = {"1688", "sourcing1688", "sourcing-agent-1688", "chrom
 def normalize_provider_name(provider_name: str | None = None) -> str:
     selected = (provider_name or get_settings().provider or "auto").lower()
     if selected in CHROME_DEVTOOLS_ALIASES:
-        return "auto"
+        return "chrome-devtools"
     return selected
 
 
@@ -41,6 +41,8 @@ def get_provider(provider_name: str | None = None) -> Base1688Provider:
     selected = normalize_provider_name(provider_name)
     if selected == "auto":
         return Auto1688Provider(settings=settings)
+    if selected == "chrome-devtools":
+        return ChromeDevtools1688Provider(settings=settings)
     if selected == "api":
         return Api1688Provider(settings=settings)
     if selected == "browser":
@@ -128,12 +130,12 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     "error": structured_error("live_not_verified", "Browser profile exists, but login/verification state was not checked.").model_dump(mode="json"),
                 }
             )
-    elif selected == "auto":
+    elif selected in {"auto", "chrome-devtools"}:
         missing_env = _missing_api_env(settings)
-        if not missing_env:
+        if selected == "auto" and not missing_env:
             payload.update({"status": "live_not_verified", "ready": True, "selected_provider": "api", "suggested_action": "Run an opt-in live smoke test before treating API results as verified."})
         else:
-            message = "Auto provider needs Chrome DevTools page/network capture for live 1688 data."
+            message = "Chrome DevTools provider needs page/network capture for live 1688 data." if selected == "chrome-devtools" else "Auto provider needs Chrome DevTools page/network capture for live 1688 data."
             payload.update(
                 {
                     "status": "provider_unavailable",
@@ -148,8 +150,8 @@ def check_provider(provider_name: str) -> dict[str, Any]:
                     ).model_dump(mode="json"),
                 }
             )
-        if requested in CHROME_DEVTOOLS_ALIASES:
-            payload.update({"provider": "chrome-devtools", "selected_provider": "chrome-devtools", "requested_provider": requested})
+        if selected == "chrome-devtools":
+            payload.update({"provider": "chrome-devtools", "selected_provider": "chrome-devtools", "requested_provider": requested, "capabilities": payload["capabilities"] | {"provider": "chrome-devtools", "source_type": "browser"}})
     return payload
 
 

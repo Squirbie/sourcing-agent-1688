@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from sourcing1688 import __version__
 from sourcing1688.assets.downloader import download_assets
 from sourcing1688.config import Settings, get_settings
 from sourcing1688.models import (
@@ -31,7 +32,7 @@ from sourcing1688.providers.base import Base1688Provider
 from sourcing1688.utils import extract_offer_id, structured_error
 
 
-PROVIDER_VERSION = "0.2.0"
+PROVIDER_VERSION = __version__
 
 ENDPOINTS = {
     "keyword_search": "com.alibaba.fenxiao.crossborder/product.search.keywordQuery",

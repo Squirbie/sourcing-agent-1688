@@ -44,8 +44,19 @@ def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return output
 
 
+def _raw_get(raw: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in raw and raw.get(key) not in {None, ""}:
+            return raw.get(key)
+    return None
+
+
 def parse_chinese_count(value: str) -> int | None:
     text = value.replace(",", "").replace("＋", "+").strip()
+    has_sales_signal = bool(re.search(r"成交|已售|销量|售出|卖出|全网", text))
+    has_rate_signal = bool(re.search(r"复购|回头|回购|重复购买", text))
+    if has_rate_signal and not has_sales_signal:
+        return None
     patterns = [
         r"(?:成交|已售|销量|售出|卖出|全网)\D{0,12}?([0-9]+(?:\.[0-9]+)?)(万|千)?\+?\s*件?",
         r"([0-9]+(?:\.[0-9]+)?)(万|千)\+?\s*(?:件|单|人)?",
@@ -70,7 +81,11 @@ def parse_chinese_count(value: str) -> int | None:
 
 def _extract_price_range(*values: Any) -> tuple[float | None, float | None]:
     text = " ".join(_as_text(value) for value in values if value is not None)
-    currency_numbers = re.findall(r"(?:¥|￥|CNY|RMB)\s*(\d+(?:\.\d+)?)", text, flags=re.IGNORECASE)
+    currency_numbers: list[str] = []
+    for match in re.finditer(r"(?:¥|￥|CNY|RMB)\s*(\d+(?:\.\d+)?)(?:\s*[-~—]\s*(?:¥|￥)?\s*(\d+(?:\.\d+)?))?", text, flags=re.IGNORECASE):
+        currency_numbers.append(match.group(1))
+        if match.group(2):
+            currency_numbers.append(match.group(2))
     currency_numbers.extend(re.findall(r"(\d+(?:\.\d+)?)\s*元", text))
     if not currency_numbers:
         before_moq = re.split(r"\d+\s*(?:件|个|只|套|箱|包)\s*(?:起批|起订|起购)", text, maxsplit=1)[0]
@@ -141,6 +156,7 @@ def _krw(value: float | None, rate: float) -> int | None:
 def _category_hint(title: str, keyword: str) -> str | None:
     source = f"{keyword} {title}"
     hints = [
+        (("防水袋", "防水包", "手机防水袋", "手机防水包", "防水套"), "방수 파우치/방수팩 후보"),
         (("旅行", "旅游", "收纳", "洗漱", "行李", "护照", "分装瓶"), "여행/수납 관련 후보"),
         (("手机", "支架", "车载", "桌面", "懒人支架"), "스마트폰 거치/차량용 액세서리 후보"),
         (("伞", "防晒", "遮阳", "晴雨", "黑胶"), "우산/자외선 차단 관련 후보"),
@@ -174,15 +190,15 @@ def _why_candidate(sold_count: int | None, price_min: float | None, seller: str,
 
 
 def _normalize_item(raw: dict[str, Any], *, rank: int, keyword: str, rate: float) -> dict[str, Any] | None:
-    title = _as_text(raw.get("title") or raw.get("title_zh") or raw.get("name"))
-    url = _as_text(raw.get("url") or raw.get("href") or raw.get("product_url"))
+    title = _as_text(_raw_get(raw, "title", "title_zh", "titleZh", "name", "标题", "商品标题", "商品名", "名称"))
+    url = _as_text(_raw_get(raw, "url", "href", "product_url", "productUrl", "链接", "商品链接", "详情链接"))
     if not title and not url:
         return None
-    offer_id = _as_text(raw.get("offer_id")) or _extract_offer_id(url)
-    price_text = _as_text(raw.get("price_text") or raw.get("price") or raw.get("price_cny"))
-    sold_text = _as_text(raw.get("sold_text") or raw.get("sales_text") or raw.get("month_sold_text") or raw.get("trade_text"))
-    seller = _as_text(raw.get("seller_name") or raw.get("seller") or raw.get("shop_name"))
-    image_url = _as_text(raw.get("image_url") or raw.get("image") or raw.get("img"))
+    offer_id = _as_text(_raw_get(raw, "offer_id", "offerId")) or _extract_offer_id(url)
+    price_text = _as_text(_raw_get(raw, "price_text", "priceText", "price", "price_cny", "priceCny", "价格", "价格文本", "单价"))
+    sold_text = _as_text(_raw_get(raw, "sold_text", "soldText", "sales_text", "salesText", "month_sold_text", "monthSoldText", "trade_text", "tradeText", "成交", "销量", "已售", "月销量"))
+    seller = _as_text(_raw_get(raw, "seller_name", "sellerName", "seller", "shop_name", "shopName", "店铺", "店铺名", "商家", "供应商"))
+    image_url = _as_text(_raw_get(raw, "image_url", "imageUrl", "image", "img", "图片", "图片链接", "主图"))
     raw_text = _as_text(raw.get("raw_text") or raw.get("text") or " ".join(str(value) for value in raw.values() if not isinstance(value, (dict, list))))
     badges = raw.get("badges") if isinstance(raw.get("badges"), list) else []
     badges = [_as_text(badge) for badge in badges if _as_text(badge)]

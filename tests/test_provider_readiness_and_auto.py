@@ -98,3 +98,20 @@ def test_1688_provider_alias_routes_to_devtools_readiness(monkeypatch, tmp_path)
     assert payload["requested_provider"] == "1688"
     assert payload["ready"] is False
     assert payload["error"]["code"] == "chrome_devtools_required"
+
+
+def test_chrome_alias_never_routes_to_api_even_with_credentials(monkeypatch, tmp_path):
+    monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path))
+    monkeypatch.setenv("ALI1688_APP_KEY", "app-key")
+    monkeypatch.setenv("ALI1688_APP_SECRET", "app-secret")
+    monkeypatch.setenv("ALI1688_ACCESS_TOKEN", "access-token")
+
+    result = runner.invoke(app, ["provider-check", "--provider", "chrome", "--json"])
+    payload = json.loads(result.output)
+
+    assert result.exit_code == 0
+    assert payload["provider"] == "chrome-devtools"
+    assert payload["capabilities"]["provider"] == "chrome-devtools"
+    assert payload["selected_provider"] == "chrome-devtools"
+    assert payload["status"] == "provider_unavailable"
+    assert payload["ready"] is False
