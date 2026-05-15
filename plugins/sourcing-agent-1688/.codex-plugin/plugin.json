@@ -1,7 +1,7 @@
 {
   "name": "sourcing-agent-1688",
   "version": "0.5.28",
-  "description": "1688 product sourcing tools for Codex Desktop",
+  "description": "1688 product search, analysis, and asset saving tools for Codex Desktop",
   "author": {
     "name": "Squirbie",
     "url": "https://github.com/Squirbie"
@@ -15,16 +15,16 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "1688 Sourcing Agent",
-    "shortDescription": "Find, analyze, and save 1688 sourcing candidates from Codex Desktop",
-    "longDescription": "Codex Desktop plugin that combines Chrome DevTools page/network access with 1688 sourcing parsers for product research, listing analysis, asset saving, scoring, and shortlist export.",
+    "shortDescription": "Search 1688, analyze product pages, and save images or videos from Codex Desktop",
+    "longDescription": "Codex Desktop plugin that uses the user's existing Chrome session to search 1688, inspect product pages, parse visible page and network data, and save product images, videos, HTML, and manifests.",
     "developerName": "Squirbie",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "defaultPrompt": [
-      "Check 1688 provider readiness.",
-      "Find 1688 sourcing candidates for this product keyword.",
-      "Analyze this 1688 product URL.",
-      "Save this 1688 product page assets."
+      "1688에서 스마트폰 거치대 소싱 후보 찾아줘.",
+      "지금 Chrome에 열린 1688 상품을 셀러 입장에서 분석해줘.",
+      "이 1688 상품 링크의 이미지와 영상 자료를 확인해줘.",
+      "이 상품페이지 자료를 저장하고 manifest 경로 알려줘."
     ],
     "brandColor": "#2563EB"
   }
