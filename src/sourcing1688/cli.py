@@ -12,7 +12,8 @@ import typer
 from sourcing1688.auth import auth_status, build_authorization_url, clear_token_cache, exchange_code_for_token
 from sourcing1688.assets.manifest import write_manifest
 from sourcing1688.browser_profile import open_browser_profile
-from sourcing1688.codex_install import install_codex, uninstall_codex
+from sourcing1688.chrome_setup import start_chrome_devtools_port
+from sourcing1688.codex_install import doctor, install_codex, uninstall_codex
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.parsers.rendered_html import parse_rendered_html_file
@@ -43,10 +44,12 @@ _configure_utf8_stdio()
 app = typer.Typer(help="Agent-friendly 1688 sourcing toolkit.")
 shortlist_app = typer.Typer(help="Manage sourcing shortlists.")
 browser_profile_app = typer.Typer(help="Manage Playwright browser profiles.")
+chrome_devtools_app = typer.Typer(help="Manage Chrome DevTools connection.")
 live_smoke_app = typer.Typer(help="Opt-in live smoke commands.")
 auth_app = typer.Typer(help="Manage 1688 API OAuth credentials.")
 app.add_typer(shortlist_app, name="shortlist")
 app.add_typer(browser_profile_app, name="browser-profile")
+app.add_typer(chrome_devtools_app, name="chrome-devtools")
 app.add_typer(live_smoke_app, name="live-smoke")
 app.add_typer(auth_app, name="auth")
 
@@ -150,14 +153,44 @@ def install_codex_command(
         bool,
         typer.Option("--open-chrome-setup/--no-open-chrome-setup", help="Open Chrome DevTools setup page after registering MCP servers."),
     ] = True,
+    manual_windows_install: Annotated[
+        bool,
+        typer.Option("--manual-windows-install", help="Bypass Codex CLI marketplace commands and write Codex config/plugin cache directly."),
+    ] = False,
+    chrome_mode: Annotated[
+        str,
+        typer.Option("--chrome-mode", help="Chrome DevTools mode: default, auto, or port."),
+    ] = "default",
+    verify: Annotated[bool, typer.Option("--verify", help="Run doctor checks after installation.")] = False,
     json_output: JsonOption = False,
 ) -> None:
-    payload = install_codex(open_chrome_setup=open_chrome_setup)
+    payload = install_codex(
+        open_chrome_setup=open_chrome_setup,
+        manual_windows_install=manual_windows_install,
+        chrome_mode=chrome_mode,
+        verify=verify,
+    )
     exit_code = 1 if payload.get("status") == "error" else 0
     if json_output:
         _echo_json(payload, exit_code=exit_code)
     else:
         typer.echo(dumps_json(payload))
+        if exit_code:
+            raise typer.Exit(exit_code)
+
+
+@app.command("doctor")
+def doctor_command(json_output: JsonOption = False) -> None:
+    payload = doctor()
+    exit_code = 1 if payload.get("status") == "error" else 0
+    if json_output:
+        _echo_json(payload, exit_code=exit_code)
+    else:
+        for item in payload.get("checks", []):
+            marker = "PASS" if item.get("status") == "pass" else "FAIL"
+            typer.echo(f"{marker} {item.get('id')}: {item.get('message')}")
+            if item.get("next_step"):
+                typer.echo(f"  next: {item['next_step']}")
         if exit_code:
             raise typer.Exit(exit_code)
 
@@ -519,6 +552,22 @@ def browser_profile_open_command(
         _echo_json(result)
     else:
         typer.echo(dumps_json(result))
+
+
+@chrome_devtools_app.command("start")
+def chrome_devtools_start_command(
+    port: Annotated[int, typer.Option("--port", help="Remote debugging port.")] = 9222,
+    url: Annotated[str, typer.Option("--url", help="Initial URL to open in the dedicated Chrome window.")] = "https://www.1688.com/",
+    json_output: JsonOption = False,
+) -> None:
+    payload = start_chrome_devtools_port(port=port, url=url)
+    exit_code = 0 if payload.get("status") == "ok" else 1
+    if json_output:
+        _echo_json(payload, exit_code=exit_code)
+    else:
+        typer.echo(dumps_json(payload))
+        if exit_code:
+            raise typer.Exit(exit_code)
 
 
 @auth_app.command("status")

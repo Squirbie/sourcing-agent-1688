@@ -9,7 +9,18 @@ from urllib.parse import urlparse
 from mcp.server.fastmcp import FastMCP
 
 from sourcing1688.browser_profile import open_browser_profile
-from sourcing1688.chrome_setup import CHROME_DEVTOOLS_SETUP_URL, chrome_devtools_setup_command, mark_chrome_setup_opened, read_chrome_setup_marker
+from sourcing1688.chrome_setup import (
+    CHROME_DEVTOOLS_SETUP_URL,
+    DEFAULT_CHROME_DEVTOOLS_URL,
+    check_chrome_devtools_endpoint,
+    chrome_devtools_setup_command,
+    is_chrome_setup_marker_verified,
+    list_chrome_devtools_pages,
+    mark_chrome_devtools_endpoint_verified,
+    mark_chrome_setup_opened,
+    read_chrome_setup_marker,
+    start_chrome_devtools_port,
+)
 from sourcing1688.config import get_settings
 from sourcing1688.keyword_expander import expand_keywords
 from sourcing1688.assets.downloader import download_assets as download_parsed_assets
@@ -285,7 +296,24 @@ async def open_1688_browser_profile(url: str = "https://www.1688.com") -> dict[s
 def open_chrome_devtools_setup(force: bool = False) -> dict[str, Any]:
     """Open the Chrome DevTools setup page only when first-run setup has not already been recorded."""
     marker = read_chrome_setup_marker()
-    if marker and not force:
+    endpoint = check_chrome_devtools_endpoint()
+    if endpoint.get("ok"):
+        pages = list_chrome_devtools_pages()
+        verified_marker = mark_chrome_devtools_endpoint_verified(endpoint=DEFAULT_CHROME_DEVTOOLS_URL, command=None, pages=pages.get("pages", []))
+        return {
+            "status": "ok",
+            "skipped": True,
+            "opened": [],
+            "endpoint_verified": True,
+            "endpoint": endpoint,
+            "marker": verified_marker,
+            "message": "Chrome DevTools endpoint is already responding.",
+            "next_steps": [
+                "Use Chrome DevTools tools against the existing debuggable Chrome window.",
+                "Open the target 1688 page in that Chrome window if it is not already visible.",
+            ],
+        }
+    if is_chrome_setup_marker_verified(marker) and not force:
         return {
             "status": "ok",
             "skipped": True,
@@ -305,15 +333,14 @@ def open_chrome_devtools_setup(force: bool = False) -> dict[str, Any]:
             "chrome_devtools_setup_failed",
             str(exc),
             status="provider_unavailable",
-            suggested_action=f"Open {CHROME_DEVTOOLS_SETUP_URL} in Chrome, enable the local debugging connection, then open the 1688 page again.",
+            suggested_action=f"Run start_chrome_devtools_port or open {CHROME_DEVTOOLS_SETUP_URL} in Chrome, enable the local debugging connection, then open the 1688 page again.",
         )
-    marker = mark_chrome_setup_opened(command=command)
     return {
         "status": "ok",
         "skipped": False,
         "opened": [CHROME_DEVTOOLS_SETUP_URL],
         "command": command,
-        "marker": marker,
+        "marker": mark_chrome_setup_opened(command=command),
         "returncode": completed.returncode,
         "stderr": completed.stderr.strip(),
         "next_steps": [
@@ -322,6 +349,21 @@ def open_chrome_devtools_setup(force: bool = False) -> dict[str, Any]:
             "If chrome-devtools failed earlier in this Codex session, restart Codex or open a new chat after enabling the Chrome connection.",
         ],
     }
+
+
+@mcp.tool()
+def start_chrome_devtools(port: int = 9222, url: str = "https://www.1688.com/") -> dict[str, Any]:
+    """Start a dedicated Chrome window with a verified remote debugging endpoint."""
+    return start_chrome_devtools_port(port=port, url=url)
+
+
+@mcp.tool()
+def check_chrome_devtools(port: int = 9222) -> dict[str, Any]:
+    """Check whether the dedicated Chrome DevTools endpoint is responding and list visible pages."""
+    endpoint = f"http://127.0.0.1:{port}"
+    status = check_chrome_devtools_endpoint(endpoint)
+    pages = list_chrome_devtools_pages(endpoint) if status.get("ok") else {"ok": False, "pages": []}
+    return {"status": "ok" if status.get("ok") else "provider_unavailable", "endpoint": status, "pages": pages}
 
 
 @mcp.tool()

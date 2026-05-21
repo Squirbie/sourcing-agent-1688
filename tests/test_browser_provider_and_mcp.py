@@ -60,6 +60,8 @@ def test_mcp_server_registers_expected_tools():
     assert "check_1688_browser_profile" in tool_names
     assert "open_1688_browser_profile" in tool_names
     assert "open_chrome_devtools_setup" in tool_names
+    assert "start_chrome_devtools" in tool_names
+    assert "check_chrome_devtools" in tool_names
     assert "parse_1688_review_snapshot" in tool_names
     assert "parse_1688_search_results_snapshot" in tool_names
 
@@ -116,8 +118,13 @@ def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch, tmp_path):
     assert (tmp_path / "config" / "chrome-devtools-setup.json").exists()
 
 
-def test_open_chrome_devtools_setup_skips_after_marker(monkeypatch, tmp_path):
-    marker = chrome_setup.mark_chrome_setup_opened(tmp_path, command=["already-opened"])
+def test_open_chrome_devtools_setup_skips_after_verified_marker(monkeypatch, tmp_path):
+    marker = chrome_setup.mark_chrome_devtools_endpoint_verified(
+        tmp_path,
+        endpoint="http://127.0.0.1:9222",
+        command=["already-opened"],
+        pages=[{"url": "https://www.1688.com/"}],
+    )
     calls = []
 
     def mock_run(args, **kwargs):
@@ -126,6 +133,7 @@ def test_open_chrome_devtools_setup_skips_after_marker(monkeypatch, tmp_path):
 
     monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path))
     monkeypatch.setattr(mcp_server.subprocess, "run", mock_run)
+    monkeypatch.setattr(mcp_server, "check_chrome_devtools_endpoint", lambda **kwargs: {"ok": False})
 
     payload = mcp_server.open_chrome_devtools_setup()
 

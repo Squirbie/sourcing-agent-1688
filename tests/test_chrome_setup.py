@@ -36,6 +36,74 @@ def test_windows_chrome_setup_falls_back_without_cmd_start(monkeypatch):
     assert "cmd" not in command
 
 
+def test_chrome_devtools_port_command_uses_dedicated_profile(monkeypatch, tmp_path):
+    chrome = tmp_path / "chrome.exe"
+    chrome.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(chrome_setup.shutil, "which", lambda name: str(chrome) if name == "chrome.exe" else None)
+
+    command = chrome_setup.chrome_devtools_port_command(
+        port=9222,
+        user_data_dir=tmp_path / "profile",
+        url="https://www.1688.com/",
+    )
+
+    assert command[0] == str(chrome)
+    assert "--remote-debugging-port=9222" in command
+    assert f"--user-data-dir={tmp_path / 'profile'}" in command
+    assert "--no-first-run" in command
+    assert "--new-window" in command
+    assert "https://www.1688.com/" in command
+
+
+def test_start_chrome_devtools_port_verifies_endpoint_before_marker(monkeypatch, tmp_path):
+    chrome = tmp_path / "chrome.exe"
+    chrome.write_text("", encoding="utf-8")
+    calls = {"checks": 0, "popen": []}
+
+    class FakeProcess:
+        pid = 1234
+
+    def fake_check(endpoint="http://127.0.0.1:9222", timeout=2.0):
+        calls["checks"] += 1
+        return {"ok": calls["checks"] >= 2, "endpoint": endpoint, "browser": "Chrome"}
+
+    def fake_popen(command, **kwargs):
+        calls["popen"].append(command)
+        return FakeProcess()
+
+    monkeypatch.setenv("SOURCING1688_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(chrome_setup.shutil, "which", lambda name: str(chrome) if name == "chrome.exe" else None)
+    monkeypatch.setattr(chrome_setup.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(chrome_setup, "check_chrome_devtools_endpoint", fake_check)
+    monkeypatch.setattr(chrome_setup, "list_chrome_devtools_pages", lambda *args, **kwargs: {"ok": True, "pages": [{"url": "https://www.1688.com/"}]})
+    monkeypatch.setattr(chrome_setup.time, "sleep", lambda seconds: None)
+
+    payload = chrome_setup.start_chrome_devtools_port(wait_seconds=2)
+
+    assert payload["status"] == "ok"
+    assert payload["endpoint_verified"] is True
+    assert calls["popen"]
+    marker = chrome_setup.read_chrome_setup_marker(tmp_path / "home")
+    assert marker["status"] == "verified"
+    assert marker["endpoint"] == "http://127.0.0.1:9222"
+
+
+def test_setup_marker_verified_helper_rejects_opened_only_marker(tmp_path):
+    marker = chrome_setup.mark_chrome_setup_opened(tmp_path, command=["opened-only"])
+
+    assert chrome_setup.is_chrome_setup_marker_verified(marker) is False
+
+    verified = chrome_setup.mark_chrome_devtools_endpoint_verified(
+        tmp_path,
+        endpoint="http://127.0.0.1:9222",
+        command=["chrome"],
+        pages=[{"url": "https://www.1688.com/"}],
+    )
+
+    assert chrome_setup.is_chrome_setup_marker_verified(verified) is True
+
+
 def test_macos_chrome_setup_uses_open_app(monkeypatch):
     monkeypatch.setattr(chrome_setup.sys, "platform", "darwin")
 
