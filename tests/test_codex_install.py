@@ -311,6 +311,35 @@ def test_install_codex_cli_accepts_manual_windows_install_and_chrome_mode(monkey
     assert parsed["chrome_mode"] == "port"
 
 
+def test_install_codex_cli_human_output_is_concise(monkeypatch):
+    payload = {
+        "status": "ok",
+        "chrome_mode": "auto",
+        "steps": {
+            "plugin_cache": {"version": "0.5.30"},
+            "chrome_devtools": {
+                "status": "needs_user_action",
+                "next_steps": [
+                    "Open chrome://inspect/#remote-debugging in your normal signed-in Chrome profile.",
+                    "Restart Codex Desktop or open a new chat.",
+                ],
+            },
+        },
+    }
+
+    monkeypatch.setattr("sourcing1688.cli.install_codex", lambda **kwargs: payload)
+
+    result = runner.invoke(app, ["install-codex"])
+
+    assert result.exit_code == 0
+    assert "Installed 1688 Sourcing Agent" in result.output
+    assert "Version: 0.5.30" in result.output
+    assert "existing signed-in Chrome session" in result.output
+    assert "chrome://inspect/#remote-debugging" in result.output
+    assert '"steps"' not in result.output
+    assert result.output.lstrip()[0] != "{"
+
+
 def test_doctor_cli_json_can_be_mocked(monkeypatch):
     monkeypatch.setattr("sourcing1688.cli.doctor", lambda: {"status": "ok", "checks": []})
 
@@ -367,3 +396,18 @@ def test_uninstall_codex_cli_json_can_be_mocked(monkeypatch):
     assert result.exit_code == 0
     assert parsed["status"] == "ok"
     assert parsed["remove_runtime"] is True
+
+
+def test_uninstall_codex_cli_human_output_is_concise(monkeypatch):
+    monkeypatch.setattr(
+        "sourcing1688.cli.uninstall_codex",
+        lambda remove_runtime=False: {"status": "ok", "steps": {"runtime": {"removed": True}}, "next_step": "Restart Codex Desktop."},
+    )
+
+    result = runner.invoke(app, ["uninstall-codex", "--remove-runtime"])
+
+    assert result.exit_code == 0
+    assert "Removed 1688 Sourcing Agent" in result.output
+    assert "Runtime data: removed" in result.output
+    assert '"steps"' not in result.output
+    assert result.output.lstrip()[0] != "{"

@@ -65,6 +65,55 @@ def _echo_json(payload, *, exit_code: int = 0) -> None:
         raise typer.Exit(exit_code)
 
 
+def _echo_install_codex_summary(payload: dict) -> None:
+    if payload.get("status") != "ok":
+        typer.echo("Install failed.")
+        if payload.get("stage"):
+            typer.echo(f"Stage: {payload['stage']}")
+        if payload.get("message"):
+            typer.echo(payload["message"])
+        if payload.get("next_step"):
+            typer.echo(f"Next: {payload['next_step']}")
+        typer.echo("Details: rerun with --json.")
+        return
+
+    steps = payload.get("steps") if isinstance(payload.get("steps"), dict) else {}
+    plugin_cache = steps.get("plugin_cache") if isinstance(steps.get("plugin_cache"), dict) else {}
+    chrome_step = steps.get("chrome_devtools") if isinstance(steps.get("chrome_devtools"), dict) else {}
+    chrome_mode = payload.get("chrome_mode")
+    chrome_label = "existing signed-in Chrome session" if chrome_mode == "auto" else "separate recovery Chrome profile"
+
+    typer.echo("Installed 1688 Sourcing Agent for Codex Desktop.")
+    if plugin_cache.get("version"):
+        typer.echo(f"Version: {plugin_cache['version']}")
+    typer.echo(f"Chrome: {chrome_label}")
+
+    next_steps = chrome_step.get("next_steps") if isinstance(chrome_step.get("next_steps"), list) else []
+    if next_steps:
+        typer.echo("")
+        typer.echo("Next:")
+        for index, step in enumerate(next_steps, start=1):
+            typer.echo(f"{index}. {step}")
+    elif payload.get("next_step"):
+        typer.echo("")
+        typer.echo(f"Next: {payload['next_step']}")
+
+    typer.echo("")
+    typer.echo("Check later: sourcing-agent-1688 doctor")
+    typer.echo("Details: rerun with --json.")
+
+
+def _echo_uninstall_codex_summary(payload: dict, *, remove_runtime: bool) -> None:
+    typer.echo("Removed 1688 Sourcing Agent from Codex Desktop.")
+    if remove_runtime:
+        runtime = (payload.get("steps") or {}).get("runtime") if isinstance(payload.get("steps"), dict) else None
+        if isinstance(runtime, dict):
+            typer.echo(f"Runtime data: {'removed' if runtime.get('removed') else 'not found'}")
+    if payload.get("next_step"):
+        typer.echo(f"Next: {payload['next_step']}")
+    typer.echo("Details: rerun with --json.")
+
+
 def _handle_exception(exc: Exception, *, json_output: bool, code: str = "command_failed") -> None:
     if isinstance(exc, ValueError) and str(exc).startswith("Unknown provider:"):
         code = "unknown_provider"
@@ -174,7 +223,7 @@ def install_codex_command(
     if json_output:
         _echo_json(payload, exit_code=exit_code)
     else:
-        typer.echo(dumps_json(payload))
+        _echo_install_codex_summary(payload)
         if exit_code:
             raise typer.Exit(exit_code)
 
@@ -204,7 +253,7 @@ def uninstall_codex_command(
     if json_output:
         _echo_json(payload)
     else:
-        typer.echo(dumps_json(payload))
+        _echo_uninstall_codex_summary(payload, remove_runtime=remove_runtime)
 
 
 @app.command("setup")

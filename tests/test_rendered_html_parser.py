@@ -217,7 +217,7 @@ def test_visible_page_snapshot_prefers_company_name_over_supplier_highlights():
     )
 
     assert result.provider == "chrome_devtools"
-    assert result.provider_version == "0.5.29"
+    assert result.provider_version == "0.5.30"
     assert result.live_verified is True
     assert result.item.seller.name == "浙江华彩箱包有限公司"
     assert result.item.video_urls == ["https://cloud.video.taobao.com/play/u/2684580704/p/2/e/6/t/1/442197115990.mp4"]
@@ -402,7 +402,7 @@ def test_visible_page_snapshot_parser_keeps_live_dom_fields_compactly():
 
     assert result.provider == "chrome_devtools"
     assert detail.source_type == "browser"
-    assert result.provider_version == "0.5.29"
+    assert result.provider_version == "0.5.30"
     assert detail.price_tiers[0].price == 25.0
     assert detail.trade_volume == 100
     assert detail.seller.name == "杜老汉（山东）生物科技有限公司"

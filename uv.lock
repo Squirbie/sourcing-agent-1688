@@ -864,7 +864,7 @@ wheels = [
 
 [[package]]
 name = "sourcing1688"
-version = "0.5.29"
+version = "0.5.30"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
