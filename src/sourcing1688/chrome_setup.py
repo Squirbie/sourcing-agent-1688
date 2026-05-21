@@ -123,24 +123,24 @@ def _ps_quote(value: str) -> str:
 
 def _windows_focus_chrome_setup_script(chrome_command: str) -> str:
     chrome = _ps_quote(chrome_command)
-    url = _ps_quote(CHROME_DEVTOOLS_SETUP_URL)
+    inspect_url = "chrome%3A%2F%2Finspect%2F%23remote-debugging"
     return "; ".join(
         [
             "$ErrorActionPreference = 'Stop'",
             f"$chrome = {chrome}",
-            f"$url = {url}",
-            "Start-Process -FilePath $chrome | Out-Null",
-            "Start-Sleep -Milliseconds 500",
-            "$shell = New-Object -ComObject WScript.Shell",
-            "$activated = $false",
-            "for ($i = 0; $i -lt 10 -and -not $activated; $i++) { $activated = $shell.AppActivate('Chrome'); if (-not $activated) { Start-Sleep -Milliseconds 200 } }",
-            "if (-not $activated) { throw 'Could not activate Chrome.' }",
-            "Start-Sleep -Milliseconds 200",
-            "$shell.SendKeys('^t')",
-            "Start-Sleep -Milliseconds 100",
-            "$shell.SendKeys($url)",
-            "Start-Sleep -Milliseconds 100",
-            "$shell.SendKeys('{ENTER}')",
+            f"$inspectUrl = '{inspect_url}'",
+            f"$port = {DEFAULT_CHROME_DEVTOOLS_PORT}",
+            "$endpoint = \"http://127.0.0.1:$port\"",
+            "$home = [Environment]::GetEnvironmentVariable('SOURCING1688_HOME')",
+            "if ([string]::IsNullOrWhiteSpace($home)) { $home = Join-Path $env:USERPROFILE '.sourcing1688' }",
+            "$profile = Join-Path $home 'chrome-devtools-profile'",
+            "New-Item -ItemType Directory -Force -Path $profile | Out-Null",
+            "$ready = $false",
+            "try { Invoke-RestMethod -UseBasicParsing -Uri \"$endpoint/json/version\" -TimeoutSec 1 | Out-Null; $ready = $true } catch { $ready = $false }",
+            "if (-not $ready) { Start-Process -FilePath $chrome -ArgumentList @(\"--remote-debugging-port=$port\", \"--user-data-dir=$profile\", '--no-first-run', '--new-window', 'about:blank') | Out-Null }",
+            "for ($i = 0; $i -lt 40 -and -not $ready; $i++) { try { Invoke-RestMethod -UseBasicParsing -Uri \"$endpoint/json/version\" -TimeoutSec 1 | Out-Null; $ready = $true } catch { Start-Sleep -Milliseconds 250 } }",
+            "if (-not $ready) { throw \"Chrome DevTools endpoint did not respond at $endpoint. Close any existing Chrome process using port $port, then retry.\" }",
+            "Invoke-RestMethod -UseBasicParsing -Method Put -Uri \"$endpoint/json/new?$inspectUrl\" -TimeoutSec 3 | Out-Null",
         ]
     )
 

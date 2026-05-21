@@ -113,7 +113,7 @@ def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch, tmp_path):
     assert payload["status"] == "ok"
     assert payload["skipped"] is False
     assert payload["returncode"] == 0
-    assert any("chrome://inspect/#remote-debugging" in " ".join(call) for call in calls)
+    assert any("chrome%3A%2F%2Finspect%2F%23remote-debugging" in " ".join(call) for call in calls)
     assert not any("https://www.1688.com" in " ".join(call) for call in calls)
     assert (tmp_path / "config" / "chrome-devtools-setup.json").exists()
 
@@ -151,11 +151,12 @@ def test_windows_chrome_setup_command_preserves_window_state(monkeypatch):
     command = chrome_setup.chrome_devtools_setup_command()
     script = command[-1]
 
-    assert "chrome://inspect/#remote-debugging" in script
-    assert "WScript.Shell" in script
-    assert "$shell.SendKeys('^t')" in script
-    assert "$shell.SendKeys($url)" in script
+    assert "chrome%3A%2F%2Finspect%2F%23remote-debugging" in script
+    assert "--remote-debugging-port=$port" in script
+    assert "/json/new?$inspectUrl" in script
+    assert "WScript.Shell" not in script
+    assert "SendKeys" not in script
     assert "--new-tab" not in script
     assert "ShowWindowAsync" not in script
     assert "SetForegroundWindow" not in script
-    assert "about:blank" not in script
+    assert "about:blank" in script
