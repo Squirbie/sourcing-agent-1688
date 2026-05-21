@@ -215,14 +215,22 @@ def _copy_plugin_bundle_to_cache(home: Path, source: Path, *, chrome_mode: str) 
     except Exception:
         version = "current"
 
-    cache_root = home / "plugins" / "cache" / MARKETPLACE_NAME / PLUGIN_NAME
+    cache_root = _plugin_cache_root(home)
+    removed_versions = _plugin_cache_versions(home)
     target = cache_root / str(version)
     if cache_root.exists():
         shutil.rmtree(cache_root)
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(source, target)
     mcp_adjustment = _rewrite_chrome_mcp_config(target / ".mcp.json", chrome_mode=chrome_mode)
-    return {"status": "ok", "source": str(source), "target": str(target), "version": version, "mcp_adjustment": mcp_adjustment}
+    return {
+        "status": "ok",
+        "source": str(source),
+        "target": str(target),
+        "version": version,
+        "removed_versions": removed_versions,
+        "mcp_adjustment": mcp_adjustment,
+    }
 
 
 def _marketplace_plugin_bundle_source(home: Path) -> Path:
@@ -450,14 +458,23 @@ def install_codex(
     return payload
 
 
-def _latest_plugin_cache(home: Path) -> Path | None:
-    cache_root = home / "plugins" / "cache" / MARKETPLACE_NAME / PLUGIN_NAME
+def _plugin_cache_root(home: Path) -> Path:
+    return home / "plugins" / "cache" / MARKETPLACE_NAME / PLUGIN_NAME
+
+
+def _plugin_cache_versions(home: Path) -> list[str]:
+    cache_root = _plugin_cache_root(home)
     if not cache_root.exists():
-        return None
-    candidates = [path for path in cache_root.iterdir() if path.is_dir()]
+        return []
+    return sorted(path.name for path in cache_root.iterdir() if path.is_dir())
+
+
+def _latest_plugin_cache(home: Path) -> Path | None:
+    cache_root = _plugin_cache_root(home)
+    candidates = _plugin_cache_versions(home)
     if not candidates:
         return None
-    return sorted(candidates, key=lambda path: path.name)[-1]
+    return cache_root / candidates[-1]
 
 
 def _check(check_id: str, passed: bool, *, message: str, next_step: str | None = None, details: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -518,6 +535,18 @@ def doctor() -> dict[str, Any]:
             message=f"Plugin MCP config {'is readable' if mcp_ok else 'is missing or invalid'}.",
             next_step="Reinstall the plugin cache; .mcp.json must be valid JSON." if not mcp_ok else None,
             details={"path": str(mcp_path) if mcp_path else ""},
+        )
+    )
+
+    versions = _plugin_cache_versions(home)
+    single_version = len(versions) == 1
+    checks.append(
+        _check(
+            "plugin_cache_single_version",
+            single_version,
+            message="Exactly one plugin cache version is present." if single_version else f"Expected one plugin cache version, found {len(versions)}.",
+            next_step="Run `sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify` to prune old cached versions." if not single_version else None,
+            details={"cache_root": str(_plugin_cache_root(home)), "versions": versions},
         )
     )
 

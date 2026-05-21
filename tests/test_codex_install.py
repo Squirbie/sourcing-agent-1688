@@ -140,6 +140,25 @@ def test_manual_windows_install_copies_local_bundle_and_rewrites_port_mcp(monkey
     assert "http://127.0.0.1:9222" in chrome["args"]
 
 
+def test_plugin_cache_copy_removes_other_cached_versions(tmp_path):
+    source = tmp_path / "local-plugin"
+    manifest_dir = source / ".codex-plugin"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "plugin.json").write_text(json.dumps({"version": "0.5.20"}), encoding="utf-8")
+    (source / ".mcp.json").write_text(json.dumps(sample_mcp_config()), encoding="utf-8")
+
+    cache_root = tmp_path / "plugins" / "cache" / codex_install.MARKETPLACE_NAME / codex_install.PLUGIN_NAME
+    (cache_root / "0.5.18").mkdir(parents=True)
+    (cache_root / "0.5.19").mkdir(parents=True)
+
+    payload = codex_install._copy_plugin_bundle_to_cache(tmp_path, source, chrome_mode="auto")
+
+    versions = [path.name for path in cache_root.iterdir() if path.is_dir()]
+    assert payload["status"] == "ok"
+    assert payload["removed_versions"] == ["0.5.18", "0.5.19"]
+    assert versions == ["0.5.20"]
+
+
 def test_install_codex_falls_back_to_local_bundle_when_codex_access_is_denied(monkeypatch, tmp_path):
     source = tmp_path / "local-plugin"
     manifest_dir = source / ".codex-plugin"
@@ -197,6 +216,27 @@ def test_doctor_reports_plugin_files_commands_and_chrome_endpoint(monkeypatch, t
     assert checks["chrome_devtools_mcp_command"]["status"] == "pass"
     assert checks["chrome_devtools_endpoint"]["status"] == "pass"
     assert checks["chrome_devtools_1688_page"]["status"] == "pass"
+
+
+def test_doctor_reports_multiple_plugin_cache_versions(monkeypatch, tmp_path):
+    write_marketplace_bundle(tmp_path)
+    cache_source = tmp_path / ".tmp" / "marketplaces" / codex_install.MARKETPLACE_NAME / "plugins" / codex_install.PLUGIN_NAME
+    codex_install.enable_plugin_in_config(tmp_path / "config.toml")
+    codex_install._copy_plugin_bundle_to_cache(tmp_path, cache_source, chrome_mode="auto")
+
+    cache_root = tmp_path / "plugins" / "cache" / codex_install.MARKETPLACE_NAME / codex_install.PLUGIN_NAME
+    (cache_root / "0.5.15").mkdir()
+
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    monkeypatch.setattr(codex_install.shutil, "which", lambda name: f"C:/bin/{name}")
+    monkeypatch.setattr(codex_install, "check_chrome_devtools_endpoint", lambda endpoint="http://127.0.0.1:9222", timeout=2.0: {"ok": False})
+
+    payload = codex_install.doctor()
+    checks = {item["id"]: item for item in payload["checks"]}
+
+    assert payload["status"] == "needs_attention"
+    assert checks["plugin_cache_single_version"]["status"] == "fail"
+    assert checks["plugin_cache_single_version"]["details"]["versions"] == ["0.5.15", "0.5.16"]
 
 
 def test_install_codex_cli_json_can_be_mocked(monkeypatch, tmp_path):
