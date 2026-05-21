@@ -2,7 +2,7 @@
 
 Codex Desktop에서 `@sourcing-agent-1688`로 1688 상품을 찾고, Chrome에 열린 상품 페이지를 분석하고, 이미지/영상 자료 저장까지 도와주는 소싱 에이전트입니다. Windows와 macOS 둘 다 같은 설치 명령을 사용합니다.
 
-Chrome DevTools 연결로 1688 화면, DOM, 네트워크 응답을 읽고 상품 정보, 판매자 정보, 이미지, 영상 후보, 상세 자료를 정리합니다. Windows에서는 더 안정적인 전용 Chrome 프로필과 remote debugging port 방식을 자동으로 사용합니다.
+Chrome DevTools 연결로 사용자가 이미 로그인해서 쓰는 Chrome의 1688 화면, DOM, 네트워크 응답을 읽고 상품 정보, 판매자 정보, 이미지, 영상 후보, 상세 자료를 정리합니다.
 
 ## 설치
 
@@ -25,26 +25,27 @@ uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agen
 Windows에서 Codex CLI가 `[WinError 5] 액세스가 거부되었습니다`로 막히면 직접 등록 모드로 설치하세요.
 
 ```powershell
-uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify
+uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 install-codex --manual-windows-install --verify
 ```
 
 ## 처음 한 번: Chrome 연결
 
-설치 직후 한 번만 Chrome 연결 허용이 필요할 수 있습니다. 이 연결은 Chrome DevTools 기반으로 동작합니다.
+설치 직후 한 번만 Chrome 연결 허용이 필요할 수 있습니다. 이 연결은 Chrome DevTools 기반으로 동작하며, 기본값은 새 프로필이 아니라 평소 쓰는 로그인된 Chrome 세션입니다.
 
-1. 설치 명령이 Chrome 연결 설정 페이지를 열면 Chrome에서 `Allow`를 누릅니다.
-2. Codex Desktop을 다시 시작합니다.
-3. 새 채팅에서 `@sourcing-agent-1688`를 부릅니다.
+1. 평소 1688에 로그인해서 쓰는 Chrome 프로필에서 `chrome://inspect/#remote-debugging`을 엽니다.
+2. Remote debugging 연결을 켭니다.
+3. Codex Desktop을 다시 시작합니다.
+4. 새 채팅에서 `@sourcing-agent-1688`를 부르고, Chrome이 허용창을 띄우면 `Allow`를 누릅니다.
 
 상품 링크를 주면 Chrome에서 그 페이지를 열어 분석합니다. 키워드 검색을 요청하면 1688 탭이 없어도 Chrome에 검색 탭을 열고 후보를 찾습니다.
 
-허용창을 못 봤거나 연결이 안 되면 아래처럼 다시 열 수 있습니다.
+허용창을 못 봤거나 연결이 안 되면 아래처럼 설정 절차를 다시 확인할 수 있습니다.
 
 ```text
 @sourcing-agent-1688 Chrome 연결 설정 다시 열어줘.
 ```
 
-Windows에서 `DevToolsActivePort` 또는 Chrome 연결 실패가 계속 나오면 전용 Chrome 창을 직접 시작하세요.
+Windows에서 기존 Chrome 세션 연결이 계속 실패할 때만 전용 복구 Chrome 창을 직접 시작하세요. 이 방식은 별도 프로필이라 로그인/쿠키가 공유되지 않으므로 1688 실사용 소싱 기본값으로는 권장하지 않습니다.
 
 ```powershell
 uvx --from git+https://github.com/Squirbie/sourcing-agent-1688.git sourcing-agent-1688 chrome-devtools start

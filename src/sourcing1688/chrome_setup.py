@@ -121,26 +121,38 @@ def _ps_quote(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+def chrome_devtools_setup_requires_manual_navigation() -> bool:
+    return sys.platform.startswith("win")
+
+
+def chrome_devtools_setup_manual_action() -> dict[str, Any]:
+    return {
+        "url": CHROME_DEVTOOLS_SETUP_URL,
+        "ok": False,
+        "status": "needs_user_action",
+        "skipped": False,
+        "opened": [],
+        "requires_manual_navigation": True,
+        "message": "Open chrome://inspect/#remote-debugging in the signed-in Chrome profile you already use for 1688, enable remote debugging, then approve the Chrome permission dialog when Codex connects.",
+        "next_steps": [
+            f"Open {CHROME_DEVTOOLS_SETUP_URL} in your normal signed-in Chrome profile.",
+            "Enable the remote debugging connection on that page.",
+            "Restart Codex Desktop or open a new chat, then use @sourcing-agent-1688 again.",
+            "Only use `sourcing-agent-1688 chrome-devtools start` if you explicitly want a separate recovery Chrome profile.",
+        ],
+    }
+
+
 def _windows_focus_chrome_setup_script(chrome_command: str) -> str:
     chrome = _ps_quote(chrome_command)
-    inspect_url = "chrome%3A%2F%2Finspect%2F%23remote-debugging"
+    setup_url = _ps_quote(CHROME_DEVTOOLS_SETUP_URL)
     return "; ".join(
         [
             "$ErrorActionPreference = 'Stop'",
             f"$chrome = {chrome}",
-            f"$inspectUrl = '{inspect_url}'",
-            f"$port = {DEFAULT_CHROME_DEVTOOLS_PORT}",
-            "$endpoint = \"http://127.0.0.1:$port\"",
-            "$home = [Environment]::GetEnvironmentVariable('SOURCING1688_HOME')",
-            "if ([string]::IsNullOrWhiteSpace($home)) { $home = Join-Path $env:USERPROFILE '.sourcing1688' }",
-            "$profile = Join-Path $home 'chrome-devtools-profile'",
-            "New-Item -ItemType Directory -Force -Path $profile | Out-Null",
-            "$ready = $false",
-            "try { Invoke-RestMethod -UseBasicParsing -Uri \"$endpoint/json/version\" -TimeoutSec 1 | Out-Null; $ready = $true } catch { $ready = $false }",
-            "if (-not $ready) { Start-Process -FilePath $chrome -ArgumentList @(\"--remote-debugging-port=$port\", \"--user-data-dir=$profile\", '--no-first-run', '--new-window', 'about:blank') | Out-Null }",
-            "for ($i = 0; $i -lt 40 -and -not $ready; $i++) { try { Invoke-RestMethod -UseBasicParsing -Uri \"$endpoint/json/version\" -TimeoutSec 1 | Out-Null; $ready = $true } catch { Start-Sleep -Milliseconds 250 } }",
-            "if (-not $ready) { throw \"Chrome DevTools endpoint did not respond at $endpoint. Close any existing Chrome process using port $port, then retry.\" }",
-            "Invoke-RestMethod -UseBasicParsing -Method Put -Uri \"$endpoint/json/new?$inspectUrl\" -TimeoutSec 3 | Out-Null",
+            f"$setupUrl = {setup_url}",
+            "Start-Process -FilePath $chrome | Out-Null",
+            "Write-Output \"Open $setupUrl in your signed-in Chrome profile, enable remote debugging, then approve the Codex prompt.\"",
         ]
     )
 

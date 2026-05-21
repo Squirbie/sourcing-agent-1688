@@ -13,6 +13,8 @@ from sourcing1688.chrome_setup import (
     CHROME_DEVTOOLS_SETUP_URL,
     DEFAULT_CHROME_DEVTOOLS_URL,
     check_chrome_devtools_endpoint,
+    chrome_devtools_setup_manual_action,
+    chrome_devtools_setup_requires_manual_navigation,
     chrome_devtools_setup_command,
     is_chrome_setup_marker_verified,
     list_chrome_devtools_pages,
@@ -325,6 +327,11 @@ def open_chrome_devtools_setup(force: bool = False) -> dict[str, Any]:
                 "Only call open_chrome_devtools_setup(force=true) if the user wants to re-open the Chrome setup page.",
             ],
         }
+    if chrome_devtools_setup_requires_manual_navigation():
+        payload = chrome_devtools_setup_manual_action()
+        payload["status"] = "needs_user_action"
+        payload["marker"] = marker
+        return payload
     try:
         command = chrome_devtools_setup_command()
         completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
@@ -353,7 +360,7 @@ def open_chrome_devtools_setup(force: bool = False) -> dict[str, Any]:
 
 @mcp.tool()
 def start_chrome_devtools(port: int = 9222, url: str = "https://www.1688.com/") -> dict[str, Any]:
-    """Start a dedicated Chrome window with a verified remote debugging endpoint."""
+    """Start a separate recovery Chrome profile with a verified remote debugging endpoint."""
     return start_chrome_devtools_port(port=port, url=url)
 
 

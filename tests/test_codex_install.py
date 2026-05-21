@@ -26,7 +26,7 @@ def sample_mcp_config() -> dict:
             },
             "chrome-devtools": {
                 "command": "npx",
-                "args": ["-y", "chrome-devtools-mcp@latest", "--auto-connect", "--redact-network-headers"],
+                "args": ["-y", "chrome-devtools-mcp@latest", "--autoConnect", "--redact-network-headers"],
                 "startup_timeout_sec": 60,
                 "tool_timeout_sec": 300,
             },
@@ -79,6 +79,7 @@ def test_install_codex_registers_marketplace_plugin_and_removes_global_mcp(monke
     payload = codex_install.install_codex(open_chrome_setup=False)
 
     assert payload["status"] == "ok"
+    assert payload["chrome_mode"] == "auto"
     assert ["codex", "plugin", "marketplace", "add", codex_install.REPO_URL] in commands
     assert ["codex", "mcp", "remove", "sourcing1688"] in commands
     assert ["codex", "mcp", "remove", "chrome-devtools"] in commands
@@ -138,6 +139,39 @@ def test_manual_windows_install_copies_local_bundle_and_rewrites_port_mcp(monkey
     assert "--auto-connect" not in chrome["args"]
     assert "--browserUrl" in chrome["args"]
     assert "http://127.0.0.1:9222" in chrome["args"]
+
+
+def test_windows_default_install_keeps_existing_chrome_session_mode(monkeypatch, tmp_path):
+    source = tmp_path / "local-plugin"
+    manifest_dir = source / ".codex-plugin"
+    manifest_dir.mkdir(parents=True)
+    (manifest_dir / "plugin.json").write_text(json.dumps({"version": "0.5.19"}), encoding="utf-8")
+    (source / ".mcp.json").write_text(json.dumps(sample_mcp_config()), encoding="utf-8")
+
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex"))
+    monkeypatch.setattr(codex_install.shutil, "which", lambda name: f"C:/bin/{name}")
+    monkeypatch.setattr(codex_install.sys, "platform", "win32")
+    monkeypatch.setattr(codex_install, "_local_plugin_bundle_source", lambda: source)
+
+    payload = codex_install.install_codex(manual_windows_install=True, open_chrome_setup=False)
+
+    copied_mcp = json.loads(
+        (
+            tmp_path
+            / "codex"
+            / "plugins"
+            / "cache"
+            / codex_install.MARKETPLACE_NAME
+            / codex_install.PLUGIN_NAME
+            / "0.5.19"
+            / ".mcp.json"
+        ).read_text(encoding="utf-8")
+    )
+    chrome = copied_mcp["mcpServers"]["chrome-devtools"]
+    assert payload["chrome_mode"] == "auto"
+    assert chrome["command"] == "npx.cmd"
+    assert "--autoConnect" in chrome["args"]
+    assert "--browserUrl" not in chrome["args"]
 
 
 def test_plugin_cache_copy_removes_other_cached_versions(tmp_path):
@@ -317,9 +351,11 @@ def test_open_chrome_setup_page_does_not_skip_opened_only_marker(monkeypatch, tm
 
     payload = codex_install._open_chrome_setup_page()
 
-    assert payload["ok"] is True
+    assert payload["status"] == "needs_user_action"
+    assert payload["ok"] is False
     assert payload["skipped"] is False
-    assert calls
+    assert payload["requires_manual_navigation"] is True
+    assert calls == []
 
 
 def test_uninstall_codex_cli_json_can_be_mocked(monkeypatch):

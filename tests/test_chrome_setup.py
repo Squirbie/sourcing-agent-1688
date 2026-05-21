@@ -14,17 +14,17 @@ def test_windows_chrome_setup_uses_chrome_exe_directly(monkeypatch, tmp_path):
 
     assert command[:4] == ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass"]
     assert str(chrome) in command[-1]
-    assert "chrome%3A%2F%2Finspect%2F%23remote-debugging" in command[-1]
-    assert "--remote-debugging-port=$port" in command[-1]
-    assert "chrome-devtools-profile" in command[-1]
-    assert "/json/version" in command[-1]
-    assert "/json/new?$inspectUrl" in command[-1]
+    assert "chrome://inspect/#remote-debugging" in command[-1]
+    assert "--remote-debugging-port=$port" not in command[-1]
+    assert "chrome-devtools-profile" not in command[-1]
+    assert "/json/version" not in command[-1]
+    assert "/json/new?$inspectUrl" not in command[-1]
     assert "WScript.Shell" not in command[-1]
     assert "SendKeys" not in command[-1]
     assert "--new-tab" not in command[-1]
     assert "UIAutomationClient" not in command[-1]
     assert "ValuePattern" not in command[-1]
-    assert "about:blank" in command[-1]
+    assert "about:blank" not in command[-1]
     assert "keybd_event" not in command[-1]
     assert "cmd" not in command
 
@@ -38,10 +38,21 @@ def test_windows_chrome_setup_falls_back_without_cmd_start(monkeypatch):
 
     assert command[:4] == ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass"]
     assert "chrome.exe" in command[-1]
-    assert "chrome%3A%2F%2Finspect%2F%23remote-debugging" in command[-1]
-    assert "chrome-devtools-profile" in command[-1]
+    assert "chrome://inspect/#remote-debugging" in command[-1]
+    assert "chrome-devtools-profile" not in command[-1]
     assert "SendKeys" not in command[-1]
     assert "cmd" not in command
+
+
+def test_windows_setup_reports_manual_navigation(monkeypatch):
+    monkeypatch.setattr(chrome_setup.sys, "platform", "win32")
+
+    payload = chrome_setup.chrome_devtools_setup_manual_action()
+
+    assert payload["status"] == "needs_user_action"
+    assert payload["opened"] == []
+    assert payload["requires_manual_navigation"] is True
+    assert payload["url"] == chrome_setup.CHROME_DEVTOOLS_SETUP_URL
 
 
 def test_chrome_devtools_port_command_uses_dedicated_profile(monkeypatch, tmp_path):

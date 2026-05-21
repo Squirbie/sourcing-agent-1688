@@ -162,24 +162,24 @@ def test_distribution_files_are_root_codex_desktop_plugin_only():
     assert "git+https://github.com/Squirbie/sourcing-agent-1688.git" in mcp["mcpServers"]["sourcing1688"]["args"]
     assert mcp["mcpServers"]["chrome-devtools"]["command"] == "npx"
     assert "chrome-devtools-mcp@latest" in mcp["mcpServers"]["chrome-devtools"]["args"]
-    assert "--auto-connect" in mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--autoConnect" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert "--redact-network-headers" in mcp["mcpServers"]["chrome-devtools"]["args"]
     assert mcp["mcpServers"]["chrome-devtools"]["startup_timeout_sec"] == 60
     assert mcp["mcpServers"]["chrome-devtools"]["tool_timeout_sec"] == 300
-    assert plugin["version"] == "0.5.28"
+    assert plugin["version"] == "0.5.29"
     assert plugin["name"] == "sourcing-agent-1688"
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert marketplace["plugins"][0]["source"] == {"source": "local", "path": "./plugins/sourcing-agent-1688"}
     assert marketplace["plugins"][0]["policy"]["installation"] == "INSTALLED_BY_DEFAULT"
     assert bundled_plugin["name"] == "sourcing-agent-1688"
-    assert bundled_plugin["version"] == "0.5.28"
+    assert bundled_plugin["version"] == "0.5.29"
     assert bundled_plugin["mcpServers"] == "./.mcp.json"
     assert "mcpServers" in bundled_mcp
     assert "mcp_servers" not in bundled_mcp
     assert bundled_mcp["mcpServers"]["chrome-devtools"]["command"] == "npx"
     assert "chrome-devtools-mcp@latest" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
-    assert "--auto-connect" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
+    assert "--autoConnect" in bundled_mcp["mcpServers"]["chrome-devtools"]["args"]
     assert bundled_mcp["mcpServers"]["chrome-devtools"]["startup_timeout_sec"] == 60
     assert bundled_mcp["mcpServers"]["chrome-devtools"]["tool_timeout_sec"] == 300
     assert "sourcing1688-mcp" in pyproject

@@ -110,12 +110,13 @@ def test_open_chrome_devtools_setup_can_be_mocked(monkeypatch, tmp_path):
 
     payload = mcp_server.open_chrome_devtools_setup()
 
-    assert payload["status"] == "ok"
+    assert payload["status"] == "needs_user_action"
     assert payload["skipped"] is False
-    assert payload["returncode"] == 0
-    assert any("chrome%3A%2F%2Finspect%2F%23remote-debugging" in " ".join(call) for call in calls)
-    assert not any("https://www.1688.com" in " ".join(call) for call in calls)
-    assert (tmp_path / "config" / "chrome-devtools-setup.json").exists()
+    assert payload["opened"] == []
+    assert payload["requires_manual_navigation"] is True
+    assert payload["url"] == "chrome://inspect/#remote-debugging"
+    assert calls == []
+    assert not (tmp_path / "config" / "chrome-devtools-setup.json").exists()
 
 
 def test_open_chrome_devtools_setup_skips_after_verified_marker(monkeypatch, tmp_path):
@@ -151,12 +152,12 @@ def test_windows_chrome_setup_command_preserves_window_state(monkeypatch):
     command = chrome_setup.chrome_devtools_setup_command()
     script = command[-1]
 
-    assert "chrome%3A%2F%2Finspect%2F%23remote-debugging" in script
-    assert "--remote-debugging-port=$port" in script
-    assert "/json/new?$inspectUrl" in script
+    assert "chrome://inspect/#remote-debugging" in script
+    assert "--remote-debugging-port=$port" not in script
+    assert "/json/new?$inspectUrl" not in script
     assert "WScript.Shell" not in script
     assert "SendKeys" not in script
     assert "--new-tab" not in script
     assert "ShowWindowAsync" not in script
     assert "SetForegroundWindow" not in script
-    assert "about:blank" in script
+    assert "about:blank" not in script

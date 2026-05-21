@@ -12,6 +12,8 @@ from sourcing1688.chrome_setup import (
     CHROME_DEVTOOLS_SETUP_URL,
     DEFAULT_CHROME_DEVTOOLS_URL,
     check_chrome_devtools_endpoint,
+    chrome_devtools_setup_manual_action,
+    chrome_devtools_setup_requires_manual_navigation,
     chrome_devtools_setup_command,
     is_chrome_setup_marker_verified,
     list_chrome_devtools_pages,
@@ -67,7 +69,7 @@ def _run(command: list[str], *, check: bool = False, stage: str | None = None) -
             "stderr": str(exc),
             "error_code": "windows_access_denied",
             "message": f"Windows denied access while running {command[0]}.",
-            "next_step": "On Windows this can happen when Codex resolves to a WindowsApps app alias. Use `sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify`.",
+            "next_step": "On Windows this can happen when Codex resolves to a WindowsApps app alias. Use `sourcing-agent-1688 install-codex --manual-windows-install --verify`.",
         }
     result = {
         "command": command,
@@ -82,7 +84,7 @@ def _run(command: list[str], *, check: bool = False, stage: str | None = None) -
             {
                 "error_code": "windows_access_denied",
                 "message": f"Windows denied access while running {command[0]}.",
-                "next_step": "Codex CLI may be resolving through a WindowsApps app alias. Rerun with `--manual-windows-install --chrome-mode port --verify`.",
+                "next_step": "Codex CLI may be resolving through a WindowsApps app alias. Rerun with `--manual-windows-install --verify`.",
             }
         )
     if check and completed.returncode != 0:
@@ -152,13 +154,13 @@ def _is_windows() -> bool:
 
 def _resolve_chrome_mode(chrome_mode: str) -> str:
     selected = chrome_mode.lower().strip()
-    if selected in {"default", "windows-default"}:
-        return "port" if _is_windows() else "auto"
-    if selected in {"auto", "auto-connect"}:
+    if selected in {"default", "windows-default", "existing", "existing-session"}:
         return "auto"
-    if selected in {"port", "browser-url"}:
+    if selected in {"auto", "auto-connect", "autoconnect"}:
+        return "auto"
+    if selected in {"port", "browser-url", "dedicated", "dedicated-profile"}:
         return "port"
-    raise ValueError("chrome_mode must be default, auto, or port.")
+    raise ValueError("chrome_mode must be default, auto, existing, dedicated, or port.")
 
 
 def _npx_command() -> str:
@@ -176,7 +178,7 @@ def _rewrite_chrome_mcp_config(mcp_path: Path, *, chrome_mode: str) -> dict[str,
 
     chrome["command"] = _npx_command()
     args = list(chrome.get("args") or [])
-    args = [arg for arg in args if arg != "--auto-connect"]
+    args = [arg for arg in args if arg not in {"--auto-connect", "--autoConnect"}]
     if chrome_mode == "port":
         endpoint = DEFAULT_CHROME_DEVTOOLS_URL
         filtered: list[str] = []
@@ -193,9 +195,9 @@ def _rewrite_chrome_mcp_config(mcp_path: Path, *, chrome_mode: str) -> dict[str,
             filtered.append(arg)
         args = filtered
         args.extend(["--browserUrl", endpoint])
-    elif "--auto-connect" not in args:
+    elif "--autoConnect" not in args:
         package_index = args.index("chrome-devtools-mcp@latest") if "chrome-devtools-mcp@latest" in args else len(args)
-        args.insert(package_index + 1, "--auto-connect")
+        args.insert(package_index + 1, "--autoConnect")
     chrome["args"] = args
     mcp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {"status": "ok", "path": str(mcp_path), "chrome_mode": chrome_mode, "command": chrome["command"], "args": args}
@@ -294,6 +296,8 @@ def _open_chrome_setup_page() -> dict[str, Any]:
             "skipped": True,
             "marker": marker,
         }
+    if chrome_devtools_setup_requires_manual_navigation():
+        return chrome_devtools_setup_manual_action()
     command = chrome_devtools_setup_command()
     try:
         completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
@@ -372,7 +376,7 @@ def install_codex(
             "status": "error",
             "message": "Codex CLI was not found on PATH.",
             "stage": "codex_cli_lookup",
-            "next_step": "Install or open Codex Desktop first. On Windows, you can also run `sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify`.",
+            "next_step": "Install or open Codex Desktop first. On Windows, you can also run `sourcing-agent-1688 install-codex --manual-windows-install --verify`.",
         }
     if shutil.which("uvx") is None:
         return {
@@ -411,7 +415,7 @@ def install_codex(
                         str(config_path),
                         str(home / "plugins" / "cache" / MARKETPLACE_NAME / PLUGIN_NAME),
                     ],
-                    "next_step": "Rerun `sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify` from a source checkout.",
+                    "next_step": "Rerun `sourcing-agent-1688 install-codex --manual-windows-install --verify` from a source checkout.",
                 }
             steps.update(fallback["steps"])
             install_method = "direct-plugin-cache"
@@ -504,7 +508,7 @@ def doctor() -> dict[str, Any]:
             "config_plugin_enabled",
             config_enabled,
             message=f"Codex config plugin block {'is enabled' if config_enabled else 'is missing'} at {config_path}.",
-            next_step=f"Run `sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify`." if not config_enabled else None,
+            next_step=f"Run `sourcing-agent-1688 install-codex --manual-windows-install --verify`." if not config_enabled else None,
             details={"path": str(config_path)},
         )
     )
@@ -545,7 +549,7 @@ def doctor() -> dict[str, Any]:
             "plugin_cache_single_version",
             single_version,
             message="Exactly one plugin cache version is present." if single_version else f"Expected one plugin cache version, found {len(versions)}.",
-            next_step="Run `sourcing-agent-1688 install-codex --manual-windows-install --chrome-mode port --verify` to prune old cached versions." if not single_version else None,
+            next_step="Run `sourcing-agent-1688 install-codex --manual-windows-install --verify` to prune old cached versions." if not single_version else None,
             details={"cache_root": str(_plugin_cache_root(home)), "versions": versions},
         )
     )
@@ -566,6 +570,7 @@ def doctor() -> dict[str, Any]:
 
     chrome = servers.get(CHROME_MCP_NAME, {}) if isinstance(servers, dict) else {}
     chrome_command = chrome.get("command") if isinstance(chrome, dict) else None
+    chrome_args = [str(arg) for arg in (chrome.get("args") or [])] if isinstance(chrome, dict) else []
     chrome_found = bool(chrome_command and shutil.which(str(chrome_command)))
     checks.append(
         _check(
@@ -577,30 +582,65 @@ def doctor() -> dict[str, Any]:
         )
     )
 
-    endpoint = DEFAULT_CHROME_DEVTOOLS_URL
-    endpoint_status = check_chrome_devtools_endpoint(endpoint)
+    auto_connect = any(arg in {"--autoConnect", "--auto-connect"} for arg in chrome_args)
+    browser_url = None
+    for index, arg in enumerate(chrome_args):
+        if arg == "--browserUrl" and index + 1 < len(chrome_args):
+            browser_url = chrome_args[index + 1]
+        elif arg.startswith("--browserUrl="):
+            browser_url = arg.split("=", 1)[1]
+    chrome_mode_ok = auto_connect or bool(browser_url)
     checks.append(
         _check(
-            "chrome_devtools_endpoint",
-            bool(endpoint_status.get("ok")),
-            message=f"Chrome DevTools endpoint {endpoint} {'responds' if endpoint_status.get('ok') else 'does not respond'}.",
-            next_step="Run `sourcing-agent-1688 chrome-devtools start`, then rerun doctor." if not endpoint_status.get("ok") else None,
-            details=endpoint_status,
+            "chrome_devtools_mcp_mode",
+            chrome_mode_ok,
+            message=(
+                "Chrome DevTools MCP is configured for the user's existing Chrome session."
+                if auto_connect
+                else "Chrome DevTools MCP is configured for a dedicated browserUrl endpoint."
+                if browser_url
+                else "Chrome DevTools MCP is missing autoConnect or browserUrl."
+            ),
+            next_step="Reinstall with `sourcing-agent-1688 install-codex --verify`." if not chrome_mode_ok else None,
+            details={"args": chrome_args, "browser_url": browser_url, "auto_connect": auto_connect},
         )
     )
 
-    pages_status = list_chrome_devtools_pages(endpoint) if endpoint_status.get("ok") else {"ok": False, "pages": []}
-    pages = pages_status.get("pages") or []
-    has_1688_page = any("1688.com" in str(page.get("url", "")) for page in pages if isinstance(page, dict))
-    checks.append(
-        _check(
-            "chrome_devtools_1688_page",
-            has_1688_page,
-            message="A 1688 page is visible in Chrome DevTools." if has_1688_page else "No 1688 page is visible in Chrome DevTools.",
-            next_step="Open https://www.1688.com/ in the Chrome window started by `sourcing-agent-1688 chrome-devtools start`." if not has_1688_page else None,
-            details={"endpoint": endpoint, "page_count": len(pages)},
+    if auto_connect and not browser_url:
+        checks.append(
+            _check(
+                "chrome_devtools_existing_session_permission",
+                True,
+                message="Existing-session mode is installed. Chrome permission is confirmed inside Codex when the chrome-devtools MCP connects.",
+                next_step=f"Open {CHROME_DEVTOOLS_SETUP_URL} in your signed-in Chrome profile, enable remote debugging, restart Codex, then approve the Chrome prompt.",
+                details={"setup_url": CHROME_DEVTOOLS_SETUP_URL},
+            )
         )
-    )
+    else:
+        endpoint = browser_url or DEFAULT_CHROME_DEVTOOLS_URL
+        endpoint_status = check_chrome_devtools_endpoint(endpoint)
+        checks.append(
+            _check(
+                "chrome_devtools_endpoint",
+                bool(endpoint_status.get("ok")),
+                message=f"Chrome DevTools endpoint {endpoint} {'responds' if endpoint_status.get('ok') else 'does not respond'}.",
+                next_step="Run `sourcing-agent-1688 chrome-devtools start`, then rerun doctor." if not endpoint_status.get("ok") else None,
+                details=endpoint_status,
+            )
+        )
+
+        pages_status = list_chrome_devtools_pages(endpoint) if endpoint_status.get("ok") else {"ok": False, "pages": []}
+        pages = pages_status.get("pages") or []
+        has_1688_page = any("1688.com" in str(page.get("url", "")) for page in pages if isinstance(page, dict))
+        checks.append(
+            _check(
+                "chrome_devtools_1688_page",
+                has_1688_page,
+                message="A 1688 page is visible in Chrome DevTools." if has_1688_page else "No 1688 page is visible in Chrome DevTools.",
+                next_step="Open https://www.1688.com/ in the Chrome window started by `sourcing-agent-1688 chrome-devtools start`." if not has_1688_page else None,
+                details={"endpoint": endpoint, "page_count": len(pages)},
+            )
+        )
 
     failed = [item for item in checks if item["status"] != "pass"]
     return {

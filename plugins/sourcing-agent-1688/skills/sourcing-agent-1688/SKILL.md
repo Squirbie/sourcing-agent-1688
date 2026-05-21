@@ -24,11 +24,11 @@ If setup is needed:
 
 1. Call `open_chrome_devtools_setup`.
 2. If the tool returns `endpoint_verified: true`, continue with the Chrome tabs exposed by that endpoint.
-3. If the tool still reports `DevToolsActivePort`, or no endpoint is verified on Windows, call `start_chrome_devtools` and use the dedicated Chrome window it opens.
-4. If the setup tool returns `skipped: true` without `endpoint_verified: true`, check the endpoint with `check_chrome_devtools` before continuing.
-5. Tell the user that the Chrome setup tab was opened only when `opened` is non-empty.
-6. Ask the user to allow the Chrome DevTools connection in the opened Chrome settings page.
-7. Ask the user to open the target 1688 page in the verified Chrome profile.
+3. If the tool returns `needs_user_action`, ask the user to open `chrome://inspect/#remote-debugging` in their normal signed-in Chrome profile, enable remote debugging, then restart Codex or open a new chat.
+4. Do not call `start_chrome_devtools` as an automatic fallback for 1688 sourcing. It opens a separate recovery Chrome profile without the user's 1688 cookies/login.
+5. Use `start_chrome_devtools` only when the user explicitly accepts a separate recovery profile or asks for port-mode troubleshooting.
+6. If the setup tool returns `skipped: true` without `endpoint_verified: true`, explain that existing-session permission is pending and wait for the user to confirm setup.
+7. Tell the user that a Chrome setup tab was opened only when `opened` is non-empty.
 8. Stop there until the user confirms setup is done or provides the target page.
 
 Do not treat a setup marker as proof of connectivity unless it says `status: verified` or the endpoint check passes.

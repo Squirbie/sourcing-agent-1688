@@ -18,7 +18,7 @@
       "args": [
         "-y",
         "chrome-devtools-mcp@latest",
-        "--auto-connect",
+        "--autoConnect",
         "--redact-network-headers",
         "--no-usage-statistics",
         "--no-performance-crux"

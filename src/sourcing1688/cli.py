@@ -159,7 +159,7 @@ def install_codex_command(
     ] = False,
     chrome_mode: Annotated[
         str,
-        typer.Option("--chrome-mode", help="Chrome DevTools mode: default, auto, or port."),
+        typer.Option("--chrome-mode", help="Chrome DevTools mode: default/auto uses the signed-in Chrome session; port uses a separate recovery profile."),
     ] = "default",
     verify: Annotated[bool, typer.Option("--verify", help="Run doctor checks after installation.")] = False,
     json_output: JsonOption = False,
@@ -557,7 +557,7 @@ def browser_profile_open_command(
 @chrome_devtools_app.command("start")
 def chrome_devtools_start_command(
     port: Annotated[int, typer.Option("--port", help="Remote debugging port.")] = 9222,
-    url: Annotated[str, typer.Option("--url", help="Initial URL to open in the dedicated Chrome window.")] = "https://www.1688.com/",
+    url: Annotated[str, typer.Option("--url", help="Initial URL to open in the separate recovery Chrome profile.")] = "https://www.1688.com/",
     json_output: JsonOption = False,
 ) -> None:
     payload = start_chrome_devtools_port(port=port, url=url)
