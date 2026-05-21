@@ -126,10 +126,21 @@ def _windows_focus_chrome_setup_script(chrome_command: str) -> str:
     url = _ps_quote(CHROME_DEVTOOLS_SETUP_URL)
     return "; ".join(
         [
-            "$ErrorActionPreference = 'SilentlyContinue'",
+            "$ErrorActionPreference = 'Stop'",
             f"$chrome = {chrome}",
             f"$url = {url}",
-            "Start-Process -FilePath $chrome -ArgumentList @('--new-tab', $url) | Out-Null",
+            "Start-Process -FilePath $chrome | Out-Null",
+            "Start-Sleep -Milliseconds 500",
+            "$shell = New-Object -ComObject WScript.Shell",
+            "$activated = $false",
+            "for ($i = 0; $i -lt 10 -and -not $activated; $i++) { $activated = $shell.AppActivate('Chrome'); if (-not $activated) { Start-Sleep -Milliseconds 200 } }",
+            "if (-not $activated) { throw 'Could not activate Chrome.' }",
+            "Start-Sleep -Milliseconds 200",
+            "$shell.SendKeys('^t')",
+            "Start-Sleep -Milliseconds 100",
+            "$shell.SendKeys($url)",
+            "Start-Sleep -Milliseconds 100",
+            "$shell.SendKeys('{ENTER}')",
         ]
     )
 

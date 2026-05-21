@@ -151,8 +151,11 @@ def test_windows_chrome_setup_command_preserves_window_state(monkeypatch):
     command = chrome_setup.chrome_devtools_setup_command()
     script = command[-1]
 
-    assert "--new-tab" in script
     assert "chrome://inspect/#remote-debugging" in script
+    assert "WScript.Shell" in script
+    assert "$shell.SendKeys('^t')" in script
+    assert "$shell.SendKeys($url)" in script
+    assert "--new-tab" not in script
     assert "ShowWindowAsync" not in script
     assert "SetForegroundWindow" not in script
     assert "about:blank" not in script
